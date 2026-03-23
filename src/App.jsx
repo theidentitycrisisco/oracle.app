@@ -4016,7 +4016,7 @@ function HeroCard({ pull, onTap, isNew = false, onOracle }) {
 // ── Oracle Page — unified persistent chat ─────────────────────────────────
 // All conversations live in one feed. Day chips separate sessions by date.
 // No overlay, no back button — this IS the oracle tab.
-function OraclePage({ pulls, contextProfile, today, onNavigateToDay }) {
+function OraclePage({ pulls, contextProfile, today, onNavigateToDay, userId }) {
   const [allMessages, setAllMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -4030,17 +4030,21 @@ function OraclePage({ pulls, contextProfile, today, onNavigateToDay }) {
     (async () => {
       const sortedDates = Object.keys(pulls).sort();
       const msgs = [];
-      for (const dateKey of sortedDates) {
-        try {
-          const stored = await window.storage.get(`oracle_convo_${dateKey}`);
-          if (stored) {
-            const convo = JSON.parse(stored.value);
-            if (convo.length > 0) {
+      if (userId) {
+        for (const dateKey of sortedDates) {
+          try {
+            const { data } = await supabase
+              .from("oracle_convos")
+              .select("messages")
+              .eq("user_id", userId)
+              .eq("date_key", dateKey)
+              .single();
+            if (data?.messages?.length > 0) {
               msgs.push({ type: "divider", dateKey, pull: pulls[dateKey] });
-              convo.forEach(m => msgs.push({ type: "msg", dateKey, ...m }));
+              data.messages.forEach(m => msgs.push({ type: "msg", dateKey, ...m }));
             }
-          }
-        } catch {}
+          } catch {}
+        }
       }
       // Always show today's divider at the bottom even if no convo yet
       const todayHasDivider = msgs.find(m => m.dateKey === today && m.type === "divider");
@@ -4051,17 +4055,23 @@ function OraclePage({ pulls, contextProfile, today, onNavigateToDay }) {
       setActiveDateKey(today);
       setLoaded(true);
     })();
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (loaded) feedEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [allMessages, loaded]);
 
   const saveConvo = async (dateKey, msgs) => {
+    if (!userId) return;
     const convoMsgs = msgs
       .filter(m => m.type === "msg" && m.dateKey === dateKey)
       .map(m => ({ role: m.role, content: m.content }));
-    try { await window.storage.set(`oracle_convo_${dateKey}`, JSON.stringify(convoMsgs)); } catch {}
+    try {
+      await supabase
+        .from("oracle_convos")
+        .upsert({ user_id: userId, date_key: dateKey, messages: convoMsgs },
+                 { onConflict: "user_id,date_key" });
+    } catch {}
   };
 
   const sendMessage = async () => {
@@ -4503,7 +4513,7 @@ function OracleMark({ size=80, color="#f0ece4", opacity=1 }) {
   );
 }
 
-function Onboarding({ step, onComplete, onUpdate, user }) {
+function Onboarding({ step, onComplete, onUpdate, user, onSaveOnboardData }) {
   const [email, setEmail] = React.useState("");
   const [emailSent, setEmailSent] = React.useState(false);
   const [name, setName] = React.useState("");
@@ -4525,15 +4535,25 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
 
   const finishOnboard = async () => {
     setExiting(true);
-    const userData = { name, email, deck, intention,
-      joinedAt: new Date().toISOString() };
+    const deckLabel = deck === "playing" ? "traditional 52-card playing cards" : "78-card tarot";
+    const intentionPart = intention ? " Their current intention or focus: " + intention + "." : "";
+    const ctx = "You are reading for " + (name || "a seeker") + ", who practices daily card pulls as a ritual of reflection and guidance. Their preferred deck: " + deckLabel + "." + intentionPart + " This is a disciplined, reflective practice — not a casual horoscope check. Speak with care, directness, and honesty.";
     try {
-      await window.storage.set("oracle_user", JSON.stringify(userData));
-      // Build context profile from onboarding data
-      const deckLabel = deck === "playing" ? "traditional 52-card playing cards" : "78-card tarot";
-      const intentionPart = intention ? " Their current intention or focus: " + intention + "." : "";
-      const ctx = "You are reading for " + (name || "a seeker") + ", who practices daily card pulls as a ritual of reflection and guidance. Their preferred deck: " + deckLabel + "." + intentionPart + " This is a disciplined, reflective practice — not a casual horoscope check. Speak with care, directness, and honesty.";
-      await window.storage.set("oracle_context", ctx);
+      // Send magic link — Supabase creates the user on first click
+      if (email) {
+        await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            data: { name, deck, intention },
+            shouldCreateUser: true,
+          }
+        });
+      }
+      // Persist onboarding data locally so ready screen can show immediately;
+      // DB write happens in onAuthStateChange after user clicks the magic link.
+      if (typeof onSaveOnboardData === "function") {
+        onSaveOnboardData({ name, email, deck, intention, ctx });
+      }
     } catch {}
     setTimeout(() => {
       setExiting(false);
@@ -4791,6 +4811,8 @@ function logSpend(callName, model, inputTokens, outputTokens) {
 // ── App ────────────────────────────────────────────────────────────────────
 export default function OracleApp() {
   const [pulls, setPulls] = useState({});
+  const [supabaseUserId, setSupabaseUserId] = useState(null);
+  const pendingOnboardRef = useRef(null);
   const [activeTab, setActiveTab] = useState("home"); // home | archive | pull | oracle | veil | reading | profile | settings | settings
   const [onboardStep, setOnboardStep] = useState("loading"); // loading | splash | welcome | email | verify | name | deck | intention | ready | app
   const [onboardUser, setOnboardUser] = useState({ name:"", email:"", deck:"playing", intention:"" });
@@ -4866,53 +4888,126 @@ export default function OracleApp() {
   const [oracleThreads, setOracleThreads] = useState({});
   const [pullSaved, setPullSaved] = useState(false);
 
+  // ── Supabase auth listener ────────────────────────────────────────────────
+  // Fires on page load (INITIAL_SESSION) and whenever auth state changes.
   useEffect(() => {
-    (async () => {
-      const base = {};
-      HISTORICAL_PULLS.forEach(p => { base[p.date] = p; });
-      try {
-        // Check for existing user — skip onboarding if found
-        const userStored = await window.storage.get("oracle_user");
-        const stored = await window.storage.get("oracle_pulls");
-        const ctx = await window.storage.get("oracle_context");
-        const prefs = await window.storage.get("oracle_prefs");
-        setPulls(stored ? { ...base, ...JSON.parse(stored.value) } : base);
-        if (ctx) { setContextProfile(ctx.value); setContextSaved(true); setContextEditing(false); }
-        if (userStored) {
-          const u = JSON.parse(userStored.value);
-          setOnboardUser(u);
-          setOnboardName(u.name||"");
-          setOnboardDeck(u.deck||"playing");
-          // Existing user — go straight to splash then app
-          setTimeout(() => setOnboardStep("app"), 1800);
-          setOnboardStep("splash");
-        } else {
-          // New user — show splash then welcome
-          setTimeout(() => setOnboardStep("welcome"), 2200);
-          setOnboardStep("splash");
-        }
-        if (prefs) {
-          const p = JSON.parse(prefs.value);
-          if (p.darkMode !== undefined) {
-            setDarkMode(p.darkMode);
-            document.documentElement.classList.toggle("dark", p.darkMode);
-            document.body.classList.toggle("dark", p.darkMode);
-          }
-          if (p.defaultDeck) { setDefaultDeck(p.defaultDeck); setPullDeck(p.defaultDeck); }
-          if (p.defaultStyle) { setDefaultStyle(p.defaultStyle); setPullStyle(p.defaultStyle); }
-          try { const rm = await window.storage.get('oracle_resonance'); if (rm) setResonanceMap(JSON.parse(rm.value)); } catch {}
-        }
-      } catch {
+    const base = {};
+    HISTORICAL_PULLS.forEach(p => { base[p.date] = p; });
+
+    const loadUserData = async (session) => {
+      if (!session?.user) {
         setPulls(base);
-        // On error, show onboarding
         setTimeout(() => setOnboardStep("welcome"), 2200);
         setOnboardStep("splash");
+        return;
       }
-    })();
+      const uid = session.user.id;
+      setSupabaseUserId(uid);
+
+      try {
+        // Load profile
+        const { data: profile } = await supabase
+          .from("profiles").select("*").eq("id", uid).single();
+        if (profile) {
+          const u = { name: profile.name||"", email: profile.email||session.user.email||"",
+                      deck: profile.deck||"playing", intention: profile.intention||"",
+                      joinedAt: profile.joined_at };
+          setOnboardUser(u);
+          setOnboardName(u.name);
+          setOnboardDeck(u.deck);
+        }
+
+        // Load pulls
+        const { data: pullRows } = await supabase
+          .from("pulls").select("*").eq("user_id", uid);
+        const userPulls = {};
+        (pullRows||[]).forEach(r => {
+          userPulls[r.date] = {
+            date: r.date, card: r.card, deck: r.deck,
+            reading: r.reading, intention: r.intention,
+            reflection: r.reflection, resonance: r.resonance,
+            tags: r.tags, time: r.time
+          };
+        });
+        setPulls({ ...base, ...userPulls });
+
+        // Load resonance map from pulls
+        const rmap = {};
+        (pullRows||[]).forEach(r => { if (r.resonance != null) rmap[r.date] = r.resonance; });
+        setResonanceMap(rmap);
+
+        // Load preferences
+        const { data: prefs } = await supabase
+          .from("preferences").select("*").eq("user_id", uid).single();
+        if (prefs) {
+          if (prefs.dark_mode != null) {
+            setDarkMode(prefs.dark_mode);
+            document.documentElement.classList.toggle("dark", prefs.dark_mode);
+            document.body.classList.toggle("dark", prefs.dark_mode);
+          }
+          if (prefs.default_deck) { setDefaultDeck(prefs.default_deck); setPullDeck(prefs.default_deck); }
+          if (prefs.default_style) { setDefaultStyle(prefs.default_style); setPullStyle(prefs.default_style); }
+          if (prefs.context_profile) { setContextProfile(prefs.context_profile); setContextSaved(true); setContextEditing(false); }
+        }
+
+        setTimeout(() => setOnboardStep("app"), 1800);
+        setOnboardStep("splash");
+      } catch {
+        setPulls(base);
+        setTimeout(() => setOnboardStep("app"), 1800);
+        setOnboardStep("splash");
+      }
+    };
+
+    // Check session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      loadUserData(session);
+    });
+
+    // Listen for auth changes (magic link clicks, sign-out)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN") {
+        // Write pending onboard data if present
+        if (pendingOnboardRef.current && session?.user) {
+          const uid = session.user.id;
+          const { name, email, deck, intention, ctx } = pendingOnboardRef.current;
+          await supabase.from("profiles").upsert(
+            { id: uid, name, email: email||session.user.email, deck, intention,
+              joined_at: new Date().toISOString() },
+            { onConflict: "id" }
+          );
+          await supabase.from("preferences").upsert(
+            { user_id: uid, context_profile: ctx },
+            { onConflict: "user_id" }
+          );
+          pendingOnboardRef.current = null;
+        }
+        await loadUserData(session);
+      } else if (event === "SIGNED_OUT") {
+        setSupabaseUserId(null);
+        setOnboardUser({ name:"", email:"", deck:"playing", intention:"" });
+        setPulls(base);
+        setResonanceMap({});
+        setContextProfile(CONTEXT_DRAFT);
+        setContextSaved(false);
+        setContextEditing(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const savePrefs = async (prefs) => {
-    try { await window.storage.set("oracle_prefs", JSON.stringify(prefs)); } catch {}
+    if (!supabaseUserId) return;
+    try {
+      await supabase.from("preferences").upsert(
+        { user_id: supabaseUserId,
+          dark_mode: prefs.darkMode,
+          default_deck: prefs.defaultDeck,
+          default_style: prefs.defaultStyle },
+        { onConflict: "user_id" }
+      );
+    } catch {}
   };
 
   const toggleDark = () => {
@@ -4924,11 +5019,28 @@ export default function OracleApp() {
   };
 
   const savePulls = async (updated) => {
-    const u = {};
+    if (!supabaseUserId) return;
+    const rows = [];
     Object.entries(updated).forEach(([date, pull]) => {
-      if (!HISTORICAL_PULLS.find(h => h.date === date) || pull.reflection) u[date] = pull;
+      if (!HISTORICAL_PULLS.find(h => h.date === date) || pull.reflection) {
+        rows.push({
+          user_id: supabaseUserId,
+          date: pull.date || date,
+          card: pull.card,
+          deck: pull.deck,
+          reading: pull.reading,
+          intention: pull.intention,
+          reflection: pull.reflection,
+          resonance: pull.resonance,
+          tags: pull.tags,
+          time: pull.time,
+        });
+      }
     });
-    try { await window.storage.set("oracle_pulls", JSON.stringify(u)); } catch {}
+    if (rows.length === 0) return;
+    try {
+      await supabase.from("pulls").upsert(rows, { onConflict: "user_id,date" });
+    } catch {}
   };
 
   const generateReading = async () => {
@@ -5124,7 +5236,13 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
   const saveResonance = async (date, idx) => {
     const updated = { ...resonanceMap, [date]: idx };
     setResonanceMap(updated);
-    try { await window.storage.set("oracle_resonance", JSON.stringify(updated)); } catch {}
+    if (!supabaseUserId) return;
+    try {
+      await supabase.from("pulls")
+        .update({ resonance: idx })
+        .eq("user_id", supabaseUserId)
+        .eq("date", date);
+    } catch {}
   };
 
   const saveReflection = async (date) => {
@@ -5777,6 +5895,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
       pulls={pulls}
       contextProfile={contextProfile}
       today={today}
+      userId={supabaseUserId}
       onNavigateToDay={(pull) => { setReflectionDraft(pull.reflection||""); setSelectedEntry(pull); }}
     />
   );
@@ -5967,7 +6086,17 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
           <div className="context-actions">
             {contextEditing ? (
               <>
-                <button className="context-btn primary" onClick={async()=>{try{await window.storage.set("oracle_context",contextProfile);setContextSaved(true);setContextEditing(false);}catch{}}}>Activate →</button>
+                <button className="context-btn primary" onClick={async()=>{
+                  setContextSaved(true); setContextEditing(false);
+                  if (supabaseUserId) {
+                    try {
+                      await supabase.from("preferences").upsert(
+                        { user_id: supabaseUserId, context_profile: contextProfile },
+                        { onConflict: "user_id" }
+                      );
+                    } catch {}
+                  }
+                }}>Activate →</button>
                 <button className="context-btn" onClick={()=>setContextProfile(CONTEXT_DRAFT)}>Reset</button>
               </>
             ) : (
@@ -6010,7 +6139,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
       {/* Logout */}
       <div className="settings-section" style={{borderTop:"1px solid var(--rule)",paddingTop:"28px",marginTop:"12px"}}>
         <button className="settings-logout-btn" onClick={async()=>{
-          try { await window.storage.delete("oracle_user"); } catch {}
+          try { await supabase.auth.signOut(); } catch {}
           setOnboardStep("splash");
           setTimeout(()=>setOnboardStep("welcome"), 2200);
           setActiveTab("home");
@@ -6196,6 +6325,32 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
     if (updates.deck) { setOnboardDeck(updates.deck); setDefaultDeck(updates.deck); setPullDeck(updates.deck); }
     if (updates.email) setOnboardUser(u => ({...u, email: updates.email}));
   };
+  // Called from Onboarding finishOnboard — stores data pending magic link click
+  const handleOnboardSaveData = (data) => {
+    pendingOnboardRef.current = data;
+    // If already authed (e.g. Google), write immediately
+    if (supabaseUserId) {
+      (async () => {
+        const { name, email, deck, intention, ctx } = data;
+        await supabase.from("profiles").upsert(
+          { id: supabaseUserId, name, email: email||"", deck, intention,
+            joined_at: new Date().toISOString() },
+          { onConflict: "id" }
+        );
+        await supabase.from("preferences").upsert(
+          { user_id: supabaseUserId, context_profile: ctx },
+          { onConflict: "user_id" }
+        );
+        setContextProfile(ctx);
+        setContextSaved(true);
+        setContextEditing(false);
+        const u = { name, email, deck, intention, joinedAt: new Date().toISOString() };
+        setOnboardUser(u);
+        setOnboardName(name);
+        setOnboardDeck(deck);
+      })();
+    }
+  };
 
   return (
     <DarkContext.Provider value={darkMode}>
@@ -6208,6 +6363,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
           onComplete={handleOnboardComplete}
           onUpdate={handleOnboardUpdate}
           user={onboardUser}
+          onSaveOnboardData={handleOnboardSaveData}
         />
       )}
       <div className="grain-overlay" aria-hidden="true"/>
