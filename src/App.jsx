@@ -1,4 +1,3 @@
-import { supabase } from "./supabase";
 import React, { useState, useEffect, useRef, createContext, useContext } from "react";
 
 const DarkContext = createContext(false);
@@ -1683,44 +1682,137 @@ const GLOBAL_CSS = `
   }
 
   /* ── Offering screen (no pull yet) ── */
+
+  /* Staggered fade-in — slow, magical, top-to-bottom */
+  @keyframes offerFade {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
   .offering-screen {
     display: flex; flex-direction: column;
-    align-items: center; padding: 8px 0 0;
-    gap: 0;
+    align-items: center; padding: 0 0 160px;
+    gap: 0; overflow-x: hidden;
   }
+
+  /* Universal page header */
+  .offering-page-header {
+    padding: 48px 0 28px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 0;
+    margin-left: -24px; margin-right: -24px;
+    padding-left: 24px; padding-right: 24px;
+    display: flex; flex-direction: column;
+    align-items: center; text-align: center; gap: 10px;
+    animation: offerFade 0.9s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  .offering-page-header .header-suits { margin-bottom: 2px; }
+  .offering-page-header .header-title { line-height: 0.95; }
+  .offering-page-subhead {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 8px; letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--silver); font-weight: 500;
+    animation: offerFade 0.9s cubic-bezier(0.16,1,0.3,1) 0.12s both;
+  }
+
+  /* Date stage — ghost numeral behind, editorial row in front */
+  .offering-date-stage {
+    position: relative; width: 100%;
+    display: flex; flex-direction: column; align-items: center;
+    margin-top: 44px; margin-bottom: 0;
+    animation: offerFade 1s cubic-bezier(0.16,1,0.3,1) 0.22s both;
+    /* overflow visible so numerals bleed intentionally */
+    overflow: visible;
+  }
+  .offering-date-bg {
+    font-family: var(--font-display);
+    font-weight: 300; line-height: 0.92;
+    letter-spacing: -0.04em;
+    color: rgba(10,10,10,0.048);
+    user-select: none; pointer-events: none;
+    white-space: nowrap;
+    /* absolute so it bleeds past the stage width */
+    position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 0.05em;
+  }
+  .dark .offering-date-bg { color: rgba(240,236,228,0.036); }
+  .offering-date-editorial {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    margin-bottom: 32px;
+  }
+  .offering-date-top {
+    display: flex; align-items: baseline; gap: 9px;
+  }
+  .offering-date-num {
+    font-family: var(--font-display);
+    font-size: 15px; font-weight: 400;
+    letter-spacing: 0.08em; color: var(--ink);
+  }
+  .offering-date-slash {
+    font-family: var(--font-display);
+    font-size: 15px; font-weight: 300;
+    color: var(--silver);
+  }
+  .offering-date-month {
+    font-family: var(--font-display);
+    font-size: 15px; font-weight: 400;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink);
+  }
+  .offering-date-day {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 7px; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--silver); font-weight: 500;
+  }
+
+  /* Card — float + glow on card ONLY, no button glow */
   .offering-card-wrap {
     cursor: pointer;
-    filter: drop-shadow(0 16px 40px rgba(0,0,0,0.22));
-    transition: transform 0.2s ease, filter 0.2s ease;
-    margin-bottom: 36px;
+    position: relative; z-index: 3;
+    animation: offerFade 1.1s cubic-bezier(0.16,1,0.3,1) 0.38s both,
+               offeringFloat 5s ease-in-out 1.6s infinite;
+    margin-bottom: 56px;
   }
-  .offering-card-wrap:hover {
-    transform: translateY(-4px);
-    filter: drop-shadow(0 24px 48px rgba(0,0,0,0.3));
+  @keyframes offeringFloat {
+    0%,100% {
+      transform: rotate(-2.5deg) translateY(0px);
+      filter: drop-shadow(0 16px 40px rgba(0,0,0,0.26))
+              drop-shadow(0 0 0px rgba(184,50,50,0));
+    }
+    50% {
+      transform: rotate(-1.5deg) translateY(-12px);
+      filter: drop-shadow(0 28px 60px rgba(0,0,0,0.32))
+              drop-shadow(0 0 38px rgba(184,50,50,0.24));
+    }
   }
+
+  /* Intention field */
   .offering-intention {
-    width: 100%; margin-bottom: 16px;
+    width: 100%; margin-bottom: 0;
     position: relative;
+    animation: offerFade 0.9s cubic-bezier(0.16,1,0.3,1) 0.55s both;
+  }
+  .offering-intention-label {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 7px; letter-spacing: 0.26em; text-transform: uppercase;
+    color: var(--silver); font-weight: 500;
+    display: block; margin-bottom: 10px;
   }
   .offering-mic-btn {
-    position: absolute; bottom: 10px; right: 10px;
-    width: 34px; height: 34px; border-radius: 50%;
+    position: absolute; bottom: 11px; right: 11px;
+    width: 32px; height: 32px; border-radius: 50%;
     background: var(--red-suit); border: none;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; transition: transform 0.15s, opacity 0.15s;
     z-index: 2;
   }
   .offering-mic-btn:hover { opacity: 0.85; transform: scale(1.08); }
-  .offering-mic-btn.recording {
-    animation: micPulse 1.2s ease-in-out infinite;
-  }
+  .offering-mic-btn.recording { animation: micPulse 1.2s ease-in-out infinite; }
   @keyframes micPulse {
     0%,100% { box-shadow: 0 0 0 0 rgba(139,18,18,0.5); }
     50%      { box-shadow: 0 0 0 8px rgba(139,18,18,0); }
   }
-  .dark .offering-mic-btn.recording {
-    animation: micPulseDark 1.2s ease-in-out infinite;
-  }
+  .dark .offering-mic-btn.recording { animation: micPulseDark 1.2s ease-in-out infinite; }
   @keyframes micPulseDark {
     0%,100% { box-shadow: 0 0 0 0 rgba(224,64,64,0.5); }
     50%      { box-shadow: 0 0 0 8px rgba(224,64,64,0); }
@@ -1730,113 +1822,63 @@ const GLOBAL_CSS = `
     border: 1px solid var(--rule);
     border-radius: var(--card-radius);
     background: var(--paper-dark);
-    padding: 16px 18px;
-    font-family: var(--font-body); font-size: 15px;
+    padding: 18px 52px 18px 20px;
+    font-family: var(--font-body); font-size: 17px;
     font-weight: 300; color: var(--ink);
     outline: none; transition: border-color 0.2s;
-    text-align: center; resize: none;
-    line-height: 1.9;
+    resize: none; line-height: 1.8;
     box-shadow: var(--inner-inset);
     font-style: italic;
   }
-  .offering-intention-input::placeholder {
-    color: var(--silver); opacity: 1;
-    font-style: italic;
-    white-space: pre-line;
-  }
-  .offering-intention-input:focus {
-    border-color: var(--ash);
-    font-style: normal;
-    text-align: left;
+  .offering-intention-input::placeholder { color: var(--silver); opacity: 1; font-style: italic; }
+  .offering-intention-input:focus { border-color: var(--ash); font-style: normal; }
+
+  /* Sticky CTA — long gradient so input visually floats above it */
+  .offering-sticky-cta {
+    position: fixed;
+    bottom: 56px;
+    left: 0; right: 0;
+    z-index: 90;
+    max-width: 720px; margin: 0 auto;
+    padding: 56px 24px 18px;
+    background: linear-gradient(to bottom, transparent 0%, var(--paper) 42%);
+    pointer-events: none;
+    animation: offerFade 0.9s cubic-bezier(0.16,1,0.3,1) 0.72s both;
   }
   .offering-cta {
-    width: 100%; margin-top: 8px;
+    width: 100%;
     display: flex; align-items: center; justify-content: center; gap: 10px;
-    padding: 18px 24px;
+    padding: 19px 24px;
     background: var(--red-suit); color: #fff;
     border: none; border-radius: var(--card-radius);
     font-family: 'Montserrat', sans-serif;
     font-size: 9px; font-weight: 600;
     letter-spacing: 0.22em; text-transform: uppercase;
-    cursor: pointer; transition: opacity 0.2s ease, transform 0.15s ease;
+    cursor: pointer; transition: opacity 0.15s ease, transform 0.12s ease;
     position: relative; overflow: hidden;
-    box-shadow:
-      0 0 0 1px rgba(255,255,255,0.1),
-      0 4px 24px rgba(139,18,18,0.5),
-      0 0 60px rgba(139,18,18,0.3);
-    animation: offeringPulse 2.4s ease-in-out infinite;
+    box-shadow: 0 2px 12px rgba(184,50,50,0.28);
+    pointer-events: all;
   }
-  /* Electric shimmer — sweeps across the button */
   .offering-cta::before {
     content: '';
     position: absolute; inset: 0;
     background: linear-gradient(
       105deg,
-      transparent 30%,
-      rgba(255,255,255,0.12) 50%,
-      transparent 70%
+      transparent 28%,
+      rgba(255,255,255,0.15) 50%,
+      transparent 72%
     );
     background-size: 200% 100%;
-    animation: offeringShimmer 2.0s ease-in-out infinite;
+    animation: offeringShimmer 2.8s ease-in-out infinite;
     pointer-events: none;
-  }
-  /* Radial glow from center */
-  .offering-cta::after {
-    content: '';
-    position: absolute; inset: 0;
-    background: radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.08) 0%, transparent 65%);
-    animation: offeringGlow 2.4s ease-in-out infinite;
-    pointer-events: none;
-  }
-  @keyframes offeringPulse {
-    0%,100% {
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,0.1),
-        0 4px 24px rgba(139,18,18,0.5),
-        0 0 50px rgba(139,18,18,0.28);
-    }
-    50% {
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,0.18),
-        0 6px 32px rgba(139,18,18,0.7),
-        0 0 90px rgba(139,18,18,0.5),
-        0 0 140px rgba(139,18,18,0.2);
-    }
   }
   @keyframes offeringShimmer {
     0%   { background-position: 200% 0; opacity: 0; }
-    20%  { opacity: 1; }
-    80%  { opacity: 1; }
+    12%  { opacity: 1; }
+    88%  { opacity: 1; }
     100% { background-position: -200% 0; opacity: 0; }
   }
-  @keyframes offeringGlow {
-    0%,100% { opacity: 0.4; }
-    50%     { opacity: 1; }
-  }
-  .offering-cta:hover { opacity: 0.9; transform: translateY(-2px); }
-  .dark .offering-cta {
-    background: var(--red-suit);
-    box-shadow:
-      0 0 0 1px rgba(255,255,255,0.1),
-      0 4px 24px rgba(224,64,64,0.5),
-      0 0 60px rgba(224,64,64,0.3);
-    animation: offeringPulseDark 2.4s ease-in-out infinite;
-  }
-  @keyframes offeringPulseDark {
-    0%,100% {
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,0.1),
-        0 4px 24px rgba(224,64,64,0.5),
-        0 0 50px rgba(224,64,64,0.3);
-    }
-    50% {
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,0.2),
-        0 6px 32px rgba(224,64,64,0.7),
-        0 0 100px rgba(224,64,64,0.55),
-        0 0 160px rgba(224,64,64,0.25);
-    }
-  }
+  .offering-cta:hover { opacity: 0.88; transform: translateY(-1px); }
 
   .hero-no-pull {
     display: flex; flex-direction: column;
@@ -4017,7 +4059,7 @@ function HeroCard({ pull, onTap, isNew = false, onOracle }) {
 // ── Oracle Page — unified persistent chat ─────────────────────────────────
 // All conversations live in one feed. Day chips separate sessions by date.
 // No overlay, no back button — this IS the oracle tab.
-function OraclePage({ pulls, contextProfile, today, onNavigateToDay, userId }) {
+function OraclePage({ pulls, contextProfile, today, onNavigateToDay }) {
   const [allMessages, setAllMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -4031,21 +4073,17 @@ function OraclePage({ pulls, contextProfile, today, onNavigateToDay, userId }) {
     (async () => {
       const sortedDates = Object.keys(pulls).sort();
       const msgs = [];
-      if (userId) {
-        for (const dateKey of sortedDates) {
-          try {
-            const { data } = await supabase
-              .from("oracle_convos")
-              .select("messages")
-              .eq("user_id", userId)
-              .eq("date_key", dateKey)
-              .single();
-            if (data?.messages?.length > 0) {
+      for (const dateKey of sortedDates) {
+        try {
+          const stored = await window.storage.get(`oracle_convo_${dateKey}`);
+          if (stored) {
+            const convo = JSON.parse(stored.value);
+            if (convo.length > 0) {
               msgs.push({ type: "divider", dateKey, pull: pulls[dateKey] });
-              data.messages.forEach(m => msgs.push({ type: "msg", dateKey, ...m }));
+              convo.forEach(m => msgs.push({ type: "msg", dateKey, ...m }));
             }
-          } catch {}
-        }
+          }
+        } catch {}
       }
       // Always show today's divider at the bottom even if no convo yet
       const todayHasDivider = msgs.find(m => m.dateKey === today && m.type === "divider");
@@ -4056,23 +4094,17 @@ function OraclePage({ pulls, contextProfile, today, onNavigateToDay, userId }) {
       setActiveDateKey(today);
       setLoaded(true);
     })();
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     if (loaded) feedEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [allMessages, loaded]);
 
   const saveConvo = async (dateKey, msgs) => {
-    if (!userId) return;
     const convoMsgs = msgs
       .filter(m => m.type === "msg" && m.dateKey === dateKey)
       .map(m => ({ role: m.role, content: m.content }));
-    try {
-      await supabase
-        .from("oracle_convos")
-        .upsert({ user_id: userId, date_key: dateKey, messages: convoMsgs },
-                 { onConflict: "user_id,date_key" });
-    } catch {}
+    try { await window.storage.set(`oracle_convo_${dateKey}`, JSON.stringify(convoMsgs)); } catch {}
   };
 
   const sendMessage = async () => {
@@ -4514,7 +4546,7 @@ function OracleMark({ size=80, color="#f0ece4", opacity=1 }) {
   );
 }
 
-function Onboarding({ step, onComplete, onUpdate, user, onSaveOnboardData }) {
+function Onboarding({ step, onComplete, onUpdate, user }) {
   const [email, setEmail] = React.useState("");
   const [emailSent, setEmailSent] = React.useState(false);
   const [name, setName] = React.useState("");
@@ -4536,25 +4568,15 @@ function Onboarding({ step, onComplete, onUpdate, user, onSaveOnboardData }) {
 
   const finishOnboard = async () => {
     setExiting(true);
-    const deckLabel = deck === "playing" ? "traditional 52-card playing cards" : "78-card tarot";
-    const intentionPart = intention ? " Their current intention or focus: " + intention + "." : "";
-    const ctx = "You are reading for " + (name || "a seeker") + ", who practices daily card pulls as a ritual of reflection and guidance. Their preferred deck: " + deckLabel + "." + intentionPart + " This is a disciplined, reflective practice — not a casual horoscope check. Speak with care, directness, and honesty.";
+    const userData = { name, email, deck, intention,
+      joinedAt: new Date().toISOString() };
     try {
-      // Send magic link — Supabase creates the user on first click
-      if (email) {
-        await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            data: { name, deck, intention },
-            shouldCreateUser: true,
-          }
-        });
-      }
-      // Persist onboarding data locally so ready screen can show immediately;
-      // DB write happens in onAuthStateChange after user clicks the magic link.
-      if (typeof onSaveOnboardData === "function") {
-        onSaveOnboardData({ name, email, deck, intention, ctx });
-      }
+      await window.storage.set("oracle_user", JSON.stringify(userData));
+      // Build context profile from onboarding data
+      const deckLabel = deck === "playing" ? "traditional 52-card playing cards" : "78-card tarot";
+      const intentionPart = intention ? " Their current intention or focus: " + intention + "." : "";
+      const ctx = "You are reading for " + (name || "a seeker") + ", who practices daily card pulls as a ritual of reflection and guidance. Their preferred deck: " + deckLabel + "." + intentionPart + " This is a disciplined, reflective practice — not a casual horoscope check. Speak with care, directness, and honesty.";
+      await window.storage.set("oracle_context", ctx);
     } catch {}
     setTimeout(() => {
       setExiting(false);
@@ -4812,8 +4834,6 @@ function logSpend(callName, model, inputTokens, outputTokens) {
 // ── App ────────────────────────────────────────────────────────────────────
 export default function OracleApp() {
   const [pulls, setPulls] = useState({});
-  const [supabaseUserId, setSupabaseUserId] = useState(null);
-  const pendingOnboardRef = useRef(null);
   const [activeTab, setActiveTab] = useState("home"); // home | archive | pull | oracle | veil | reading | profile | settings | settings
   const [onboardStep, setOnboardStep] = useState("loading"); // loading | splash | welcome | email | verify | name | deck | intention | ready | app
   const [onboardUser, setOnboardUser] = useState({ name:"", email:"", deck:"playing", intention:"" });
@@ -4889,126 +4909,53 @@ export default function OracleApp() {
   const [oracleThreads, setOracleThreads] = useState({});
   const [pullSaved, setPullSaved] = useState(false);
 
-  // ── Supabase auth listener ────────────────────────────────────────────────
-  // Fires on page load (INITIAL_SESSION) and whenever auth state changes.
   useEffect(() => {
-    const base = {};
-    HISTORICAL_PULLS.forEach(p => { base[p.date] = p; });
-
-    const loadUserData = async (session) => {
-      if (!session?.user) {
-        setPulls(base);
-        setTimeout(() => setOnboardStep("welcome"), 2200);
-        setOnboardStep("splash");
-        return;
-      }
-      const uid = session.user.id;
-      setSupabaseUserId(uid);
-
+    (async () => {
+      const base = {};
+      HISTORICAL_PULLS.forEach(p => { base[p.date] = p; });
       try {
-        // Load profile
-        const { data: profile } = await supabase
-          .from("profiles").select("*").eq("id", uid).single();
-        if (profile) {
-          const u = { name: profile.name||"", email: profile.email||session.user.email||"",
-                      deck: profile.deck||"playing", intention: profile.intention||"",
-                      joinedAt: profile.joined_at };
+        // Check for existing user — skip onboarding if found
+        const userStored = await window.storage.get("oracle_user");
+        const stored = await window.storage.get("oracle_pulls");
+        const ctx = await window.storage.get("oracle_context");
+        const prefs = await window.storage.get("oracle_prefs");
+        setPulls(stored ? { ...base, ...JSON.parse(stored.value) } : base);
+        if (ctx) { setContextProfile(ctx.value); setContextSaved(true); setContextEditing(false); }
+        if (userStored) {
+          const u = JSON.parse(userStored.value);
           setOnboardUser(u);
-          setOnboardName(u.name);
-          setOnboardDeck(u.deck);
+          setOnboardName(u.name||"");
+          setOnboardDeck(u.deck||"playing");
+          // Existing user — go straight to splash then app
+          setTimeout(() => setOnboardStep("app"), 1800);
+          setOnboardStep("splash");
+        } else {
+          // New user — show splash then welcome
+          setTimeout(() => setOnboardStep("welcome"), 2200);
+          setOnboardStep("splash");
         }
-
-        // Load pulls
-        const { data: pullRows } = await supabase
-          .from("pulls").select("*").eq("user_id", uid);
-        const userPulls = {};
-        (pullRows||[]).forEach(r => {
-          userPulls[r.date] = {
-            date: r.date, card: r.card, deck: r.deck,
-            reading: r.reading, intention: r.intention,
-            reflection: r.reflection, resonance: r.resonance,
-            tags: r.tags, time: r.time
-          };
-        });
-        setPulls({ ...base, ...userPulls });
-
-        // Load resonance map from pulls
-        const rmap = {};
-        (pullRows||[]).forEach(r => { if (r.resonance != null) rmap[r.date] = r.resonance; });
-        setResonanceMap(rmap);
-
-        // Load preferences
-        const { data: prefs } = await supabase
-          .from("preferences").select("*").eq("user_id", uid).single();
         if (prefs) {
-          if (prefs.dark_mode != null) {
-            setDarkMode(prefs.dark_mode);
-            document.documentElement.classList.toggle("dark", prefs.dark_mode);
-            document.body.classList.toggle("dark", prefs.dark_mode);
+          const p = JSON.parse(prefs.value);
+          if (p.darkMode !== undefined) {
+            setDarkMode(p.darkMode);
+            document.documentElement.classList.toggle("dark", p.darkMode);
+            document.body.classList.toggle("dark", p.darkMode);
           }
-          if (prefs.default_deck) { setDefaultDeck(prefs.default_deck); setPullDeck(prefs.default_deck); }
-          if (prefs.default_style) { setDefaultStyle(prefs.default_style); setPullStyle(prefs.default_style); }
-          if (prefs.context_profile) { setContextProfile(prefs.context_profile); setContextSaved(true); setContextEditing(false); }
+          if (p.defaultDeck) { setDefaultDeck(p.defaultDeck); setPullDeck(p.defaultDeck); }
+          if (p.defaultStyle) { setDefaultStyle(p.defaultStyle); setPullStyle(p.defaultStyle); }
+          try { const rm = await window.storage.get('oracle_resonance'); if (rm) setResonanceMap(JSON.parse(rm.value)); } catch {}
         }
-
-        setTimeout(() => setOnboardStep("app"), 1800);
-        setOnboardStep("splash");
       } catch {
         setPulls(base);
-        setTimeout(() => setOnboardStep("app"), 1800);
+        // On error, show onboarding
+        setTimeout(() => setOnboardStep("welcome"), 2200);
         setOnboardStep("splash");
       }
-    };
-
-    // Check session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      loadUserData(session);
-    });
-
-    // Listen for auth changes (magic link clicks, sign-out)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN") {
-        // Write pending onboard data if present
-        if (pendingOnboardRef.current && session?.user) {
-          const uid = session.user.id;
-          const { name, email, deck, intention, ctx } = pendingOnboardRef.current;
-          await supabase.from("profiles").upsert(
-            { id: uid, name, email: email||session.user.email, deck, intention,
-              joined_at: new Date().toISOString() },
-            { onConflict: "id" }
-          );
-          await supabase.from("preferences").upsert(
-            { user_id: uid, context_profile: ctx },
-            { onConflict: "user_id" }
-          );
-          pendingOnboardRef.current = null;
-        }
-        await loadUserData(session);
-      } else if (event === "SIGNED_OUT") {
-        setSupabaseUserId(null);
-        setOnboardUser({ name:"", email:"", deck:"playing", intention:"" });
-        setPulls(base);
-        setResonanceMap({});
-        setContextProfile(CONTEXT_DRAFT);
-        setContextSaved(false);
-        setContextEditing(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    })();
   }, []);
 
   const savePrefs = async (prefs) => {
-    if (!supabaseUserId) return;
-    try {
-      await supabase.from("preferences").upsert(
-        { user_id: supabaseUserId,
-          dark_mode: prefs.darkMode,
-          default_deck: prefs.defaultDeck,
-          default_style: prefs.defaultStyle },
-        { onConflict: "user_id" }
-      );
-    } catch {}
+    try { await window.storage.set("oracle_prefs", JSON.stringify(prefs)); } catch {}
   };
 
   const toggleDark = () => {
@@ -5020,28 +4967,11 @@ export default function OracleApp() {
   };
 
   const savePulls = async (updated) => {
-    if (!supabaseUserId) return;
-    const rows = [];
+    const u = {};
     Object.entries(updated).forEach(([date, pull]) => {
-      if (!HISTORICAL_PULLS.find(h => h.date === date) || pull.reflection) {
-        rows.push({
-          user_id: supabaseUserId,
-          date: pull.date || date,
-          card: pull.card,
-          deck: pull.deck,
-          reading: pull.reading,
-          intention: pull.intention,
-          reflection: pull.reflection,
-          resonance: pull.resonance,
-          tags: pull.tags,
-          time: pull.time,
-        });
-      }
+      if (!HISTORICAL_PULLS.find(h => h.date === date) || pull.reflection) u[date] = pull;
     });
-    if (rows.length === 0) return;
-    try {
-      await supabase.from("pulls").upsert(rows, { onConflict: "user_id,date" });
-    } catch {}
+    try { await window.storage.set("oracle_pulls", JSON.stringify(u)); } catch {}
   };
 
   const generateReading = async () => {
@@ -5237,13 +5167,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
   const saveResonance = async (date, idx) => {
     const updated = { ...resonanceMap, [date]: idx };
     setResonanceMap(updated);
-    if (!supabaseUserId) return;
-    try {
-      await supabase.from("pulls")
-        .update({ resonance: idx })
-        .eq("user_id", supabaseUserId)
-        .eq("date", date);
-    } catch {}
+    try { await window.storage.set("oracle_resonance", JSON.stringify(updated)); } catch {}
   };
 
   const saveReflection = async (date) => {
@@ -5896,7 +5820,6 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
       pulls={pulls}
       contextProfile={contextProfile}
       today={today}
-      userId={supabaseUserId}
       onNavigateToDay={(pull) => { setReflectionDraft(pull.reflection||""); setSelectedEntry(pull); }}
     />
   );
@@ -6087,17 +6010,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
           <div className="context-actions">
             {contextEditing ? (
               <>
-                <button className="context-btn primary" onClick={async()=>{
-                  setContextSaved(true); setContextEditing(false);
-                  if (supabaseUserId) {
-                    try {
-                      await supabase.from("preferences").upsert(
-                        { user_id: supabaseUserId, context_profile: contextProfile },
-                        { onConflict: "user_id" }
-                      );
-                    } catch {}
-                  }
-                }}>Activate →</button>
+                <button className="context-btn primary" onClick={async()=>{try{await window.storage.set("oracle_context",contextProfile);setContextSaved(true);setContextEditing(false);}catch{}}}>Activate →</button>
                 <button className="context-btn" onClick={()=>setContextProfile(CONTEXT_DRAFT)}>Reset</button>
               </>
             ) : (
@@ -6140,7 +6053,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
       {/* Logout */}
       <div className="settings-section" style={{borderTop:"1px solid var(--rule)",paddingTop:"28px",marginTop:"12px"}}>
         <button className="settings-logout-btn" onClick={async()=>{
-          try { await supabase.auth.signOut(); } catch {}
+          try { await window.storage.delete("oracle_user"); } catch {}
           setOnboardStep("splash");
           setTimeout(()=>setOnboardStep("welcome"), 2200);
           setActiveTab("home");
@@ -6326,32 +6239,6 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
     if (updates.deck) { setOnboardDeck(updates.deck); setDefaultDeck(updates.deck); setPullDeck(updates.deck); }
     if (updates.email) setOnboardUser(u => ({...u, email: updates.email}));
   };
-  // Called from Onboarding finishOnboard — stores data pending magic link click
-  const handleOnboardSaveData = (data) => {
-    pendingOnboardRef.current = data;
-    // If already authed (e.g. Google), write immediately
-    if (supabaseUserId) {
-      (async () => {
-        const { name, email, deck, intention, ctx } = data;
-        await supabase.from("profiles").upsert(
-          { id: supabaseUserId, name, email: email||"", deck, intention,
-            joined_at: new Date().toISOString() },
-          { onConflict: "id" }
-        );
-        await supabase.from("preferences").upsert(
-          { user_id: supabaseUserId, context_profile: ctx },
-          { onConflict: "user_id" }
-        );
-        setContextProfile(ctx);
-        setContextSaved(true);
-        setContextEditing(false);
-        const u = { name, email, deck, intention, joinedAt: new Date().toISOString() };
-        setOnboardUser(u);
-        setOnboardName(name);
-        setOnboardDeck(deck);
-      })();
-    }
-  };
 
   return (
     <DarkContext.Provider value={darkMode}>
@@ -6364,7 +6251,6 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
           onComplete={handleOnboardComplete}
           onUpdate={handleOnboardUpdate}
           user={onboardUser}
-          onSaveOnboardData={handleOnboardSaveData}
         />
       )}
       <div className="grain-overlay" aria-hidden="true"/>
@@ -6392,29 +6278,17 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
             </div>
           )}
 
-          {/* Home header, compact, centered, makes space for hero card */}
+          {/* Home header — universal page header style */}
           {activeTab === "home" && (
-            <div style={{
-              padding:"44px 0 80px",
-              display:"flex", flexDirection:"column",
-              alignItems:"center", textAlign:"center", gap:"10px",
-              position:"relative",
-            }}>
-              <button className="dots-menu-btn" onClick={()=>setActiveTab("profile")}
-                style={{position:"absolute", top:0, right:0}}>
-                <svg width="14" height="14" viewBox="0 0 4 16" fill="currentColor">
-                  <circle cx="2" cy="2" r="1.2"/>
-                  <circle cx="2" cy="8" r="1.2"/>
-                  <circle cx="2" cy="14" r="1.2"/>
-                </svg>
-              </button>
-              <div className="header-suits" style={{letterSpacing:"0.22em"}}>
-                <SuitIcon suit="spade" size={16}/>
-                <SuitIcon suit="diamond" size={16} style={{color:"var(--red-suit)"}}/>
-                <SuitIcon suit="club" size={16}/>
-                <SuitIcon suit="heart" size={16} style={{color:"var(--red-suit)"}}/>
+            <div className="offering-page-header">
+              <div className="header-suits">
+                <SuitIcon suit="spade" size={14}/>
+                <SuitIcon suit="diamond" size={14} style={{color:"var(--red-suit)"}}/>
+                <SuitIcon suit="club" size={14}/>
+                <SuitIcon suit="heart" size={14} style={{color:"var(--red-suit)"}}/>
               </div>
               <div className="header-title">the offering</div>
+              <div className="offering-page-subhead">your daily draw awaits</div>
             </div>
           )}
 
@@ -6483,58 +6357,53 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
                   <>
                   <div className="offering-screen">
 
-                    {/* Date — big numeral + month, editorial Cormorant */}
+                    {/* Date stage — ghost numerals + editorial lockup */}
                     {(() => {
                       const d = new Date(today+"T12:00:00");
                       const dayNum = d.getDate();
+                      const padded = String(dayNum).padStart(2, "0");
                       const monthName = ["January","February","March","April","May","June",
                         "July","August","September","October","November","December"][d.getMonth()];
                       const dayName = ["Sunday","Monday","Tuesday","Wednesday",
                         "Thursday","Friday","Saturday"][d.getDay()];
                       return (
-                        <div style={{textAlign:"center", marginBottom:"32px"}}>
-                          <div style={{
-                            fontFamily:"var(--font-display)",
-                            fontSize:"88px", fontWeight:300,
-                            letterSpacing:"-0.02em", lineHeight:1,
-                            color:"var(--ink)",
-                          }}>{dayNum}</div>
-                          <div style={{
-                            fontFamily:"var(--font-display)",
-                            fontSize:"18px", fontWeight:300,
-                            letterSpacing:"0.12em", textTransform:"uppercase",
-                            color:"var(--ash)", marginTop:"2px",
-                          }}>{monthName}</div>
-                          <div style={{
-                            fontFamily:"'Montserrat',sans-serif",
-                            fontSize:"8px", letterSpacing:"0.22em",
-                            textTransform:"uppercase", color:"var(--silver)",
-                            marginTop:"6px",
-                          }}>{dayName}</div>
+                        <div className="offering-date-stage">
+                          {/* Massive ghost numerals — bleed past frame is intentional */}
+                          <div className="offering-date-bg" style={{fontSize:"clamp(240px,68vw,340px)"}}>
+                            <span>{padded[0]}</span>
+                            <span>{padded[1]}</span>
+                          </div>
+                          {/* Editorial date row */}
+                          <div className="offering-date-editorial">
+                            <div className="offering-date-top">
+                              <span className="offering-date-num">{dayNum}</span>
+                              <span className="offering-date-slash">/</span>
+                              <span className="offering-date-month">{monthName}</span>
+                            </div>
+                            <span className="offering-date-day">{dayName}</span>
+                          </div>
                         </div>
                       );
                     })()}
 
-                    {/* Face-down card — real CardBack, clickable */}
-                    <div className="offering-card-wrap"
-                      onClick={startDrawAnimation}
-                      style={{transform:"rotate(-3deg)"}}>
-                      <CardBack size={200} dark={darkMode}/>
+                    {/* O card back — floating, glowing */}
+                    <div className="offering-card-wrap" onClick={startDrawAnimation}>
+                      <CardBack size={260} dark={darkMode}/>
                     </div>
 
-                    {/* Intention textarea — italic, centered, greyed placeholder */}
+                    {/* Intention — visible input box */}
                     <div className="offering-intention">
+                      <label className="offering-intention-label">Intention</label>
                       <textarea
                         className="offering-intention-input"
-                        placeholder={"State your intention.\nSay a prayer.\nGod knows we need it."}
+                        placeholder="State your intention. Say a prayer."
                         value={offeringIntention}
                         onChange={e=>setOfferingIntention(e.target.value)}
-                        rows={4}
-                        style={{paddingBottom:"48px"}}
+                        rows={3}
                       />
                       <button
                         className={`offering-mic-btn ${isRecording ? "recording" : ""}`}
-                        title={isRecording ? "Stop recording" : "Speak your prayer"}
+                        title={isRecording ? "Stop recording" : "Speak your intention"}
                         onClick={()=>{
                           const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
                           if (!SR) { alert("Speech recognition not supported in this browser."); return; }
@@ -6569,14 +6438,12 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
                           setIsRecording(true);
                         }}>
                         {isRecording ? (
-                          /* Stop / waveform icon */
-                          <svg width="14" height="14" viewBox="0 0 14 14" fill="white">
+                          <svg width="12" height="12" viewBox="0 0 14 14" fill="white">
                             <rect x="2" y="2" width="10" height="10" rx="2"/>
                           </svg>
                         ) : (
-                          /* Mic icon */
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                            stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                            stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="9" y="2" width="6" height="12" rx="3"/>
                             <path d="M5 10a7 7 0 0 0 14 0"/>
                             <line x1="12" y1="19" x2="12" y2="23"/>
@@ -6586,17 +6453,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
                       </button>
                     </div>
 
-                    {/* Primary CTA */}
-                    <button className="offering-cta"
-                      onClick={startDrawAnimation}>
-                      <SuitIcon suit="spade"   size={11} style={{color:"#fff"}}/>
-                      <SuitIcon suit="diamond" size={11} style={{color:"#fff"}}/>
-                      pull a card
-                      <SuitIcon suit="club"    size={11} style={{color:"#fff"}}/>
-                      <SuitIcon suit="heart"   size={11} style={{color:"#fff"}}/>
-                    </button>
-
-                    {/* Week at a glance — below CTA */}
+                    {/* Week at a glance */}
                     <WeekBar
                       pulls={pulls}
                       today={today}
@@ -6606,6 +6463,17 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
                       onNavigateToObservatory={() => setActiveTab("archive")}
                     />
 
+                  </div>
+
+                  {/* Sticky CTA — fixed above bottom nav, only shown on home with no pull */}
+                  <div className="offering-sticky-cta">
+                    <button className="offering-cta" onClick={startDrawAnimation}>
+                      <SuitIcon suit="spade"   size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                      <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                      pull your card
+                      <SuitIcon suit="club"    size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                      <SuitIcon suit="heart"   size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                    </button>
                   </div>
                   </>
                 ) : (
