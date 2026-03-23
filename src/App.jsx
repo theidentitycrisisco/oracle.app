@@ -1,3 +1,4 @@
+import { supabase } from "./supabase";
 import React, { useState, useEffect, useRef, createContext, useContext } from "react";
 
 const DarkContext = createContext(false);
