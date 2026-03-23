@@ -61,7 +61,7 @@ const GLOBAL_CSS = `
     color: var(--ink);
     font-family: var(--font-body);
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: clip; /* clip without creating a scroll container — numerals can still escape via absolute positioning */
     transition: background 0.3s ease, color 0.3s ease;
   }
 
@@ -96,27 +96,28 @@ const GLOBAL_CSS = `
     align-items: center; justify-content: center;
   }
   .loading-eyebrow {
-    font-size: 9px; letter-spacing: 0.28em; color: rgba(245,242,237,0.2);
+    font-size: 9px; letter-spacing: 0.28em; color: rgba(245,242,237,0.55);
     margin-bottom: 56px;
   }
   .loading-suits { display: flex; gap: 32px; align-items: center; margin-bottom: 36px; }
-  .loading-suit { transition: all 0.18s ease; }
+  .loading-suit { transition: opacity 0.25s ease, filter 0.25s ease; /* NO size transition */ }
   .loading-card-name {
     font-family: 'Cormorant Unicase', Georgia, serif;
     font-size: 28px; font-weight: 300; letter-spacing: 0.04em;
-    color: rgba(245,242,237,0.7); margin-bottom: 28px; text-transform: lowercase;
+    color: rgba(245,242,237,0.85); margin-bottom: 28px; text-transform: lowercase;
+    display: flex; align-items: center; gap: 8px;
   }
   .loading-divider { width: 1px; height: 32px; background: rgba(245,242,237,0.1); margin-bottom: 28px; }
   .loading-phrase {
-    font-size: 10px; letter-spacing: 0.22em; color: rgba(245,242,237,0.35);
-    text-align: center; max-width: 240px; line-height: 1.7;
-    transition: opacity 0.3s ease; min-height: 36px;
+    font-size: 10px; letter-spacing: 0.22em; color: rgba(245,242,237,0.55);
+    text-align: center; max-width: 260px; line-height: 1.8;
+    transition: opacity 0.6s ease; min-height: 40px;
     display: flex; align-items: center; justify-content: center;
   }
   .loading-dots { display: flex; gap: 9px; margin-top: 38px; }
   .loading-dot {
     width: 3px; height: 3px; border-radius: 50%;
-    background: rgba(245,242,237,0.25);
+    background: rgba(245,242,237,0.55);
     animation: dotPulse 1.5s ease-in-out infinite;
   }
   .loading-dot:nth-child(2) { animation-delay: 0.22s; }
@@ -159,8 +160,8 @@ const GLOBAL_CSS = `
     padding-top: 0;
   }
   .bnav-pull-inner {
-    position: absolute; top: -29px; left: 50%; transform: translateX(-50%);
-    width: 58px; height: 58px; border-radius: 50%;
+    position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
+    width: 48px; height: 48px; border-radius: 50%;
     background: var(--ink); color: var(--paper);
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; border: none;
@@ -790,6 +791,111 @@ const GLOBAL_CSS = `
   .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
   .back-btn { font-size: 9px; color: var(--ash); margin-bottom: 36px; display: flex; align-items: center; gap: 7px; transition: color 0.15s; }
   .back-btn:hover { color: var(--ink); }
+
+  /* ── Pull form — card selector redesign ── */
+  .pull-card-stage {
+    display: flex; flex-direction: column; align-items: center;
+    position: relative; margin: 32px 0 40px; overflow: visible;
+  }
+  .pull-card-float {
+    animation: offeringFloat 5s ease-in-out infinite;
+    cursor: default; margin-bottom: 0;
+  }
+  /* Inline intention row */
+  .pull-intention-row {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    margin-bottom: 32px;
+    border: 1px solid var(--rule); border-radius: var(--card-radius);
+    background: var(--paper-dark); box-shadow: var(--inner-inset);
+    padding: 14px 14px 14px 18px;
+    transition: border-color 0.2s;
+  }
+  .pull-intention-row:focus-within { border-color: var(--ash); }
+  .pull-intention-text {
+    flex: 1; border: none; background: transparent; outline: none;
+    font-family: var(--font-body); font-size: 16px; font-style: italic;
+    font-weight: 300; color: var(--ink); resize: none; line-height: 1.6;
+    min-height: 24px;
+  }
+  .pull-intention-text::placeholder { color: var(--silver); font-style: italic; }
+  .pull-intention-text:focus { font-style: normal; }
+  .pull-intention-edit {
+    font-family: 'Montserrat', sans-serif; font-size: 7px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--silver); background: none; border: none;
+    cursor: pointer; padding: 4px 0; flex-shrink: 0;
+    transition: color 0.15s;
+  }
+  .pull-intention-edit:hover { color: var(--ink); }
+  /* Section label */
+  .pull-section-label {
+    font-family: 'Montserrat', sans-serif; font-size: 7px;
+    letter-spacing: 0.26em; text-transform: uppercase;
+    color: var(--silver); font-weight: 500;
+    display: block; margin-bottom: 10px;
+  }
+  /* Suit picker — 4 equal squares */
+  .pull-suit-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 8px; margin-bottom: 28px; width: 100%;
+  }
+  .pull-suit-btn {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--rule); border-radius: var(--card-radius);
+    background: var(--paper-dark); cursor: pointer;
+    box-shadow: var(--inner-inset);
+    transition: all 0.15s;
+  }
+  .pull-suit-btn:hover { border-color: var(--ash); }
+  .pull-suit-btn.selected {
+    border-color: var(--ink); background: var(--ink); box-shadow: none;
+  }
+  .pull-suit-btn.selected-red {
+    border-color: var(--red-suit); background: var(--red-suit); box-shadow: none;
+  }
+  /* Rank row — numerals */
+  .pull-rank-numerals {
+    display: grid; grid-template-columns: repeat(9, 1fr);
+    gap: 6px; margin-bottom: 8px; width: 100%;
+  }
+  /* Face cards row */
+  .pull-rank-faces {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 8px; margin-bottom: 32px; width: 100%;
+  }
+  .pull-rank-btn {
+    padding: 10px 4px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--rule); border-radius: var(--card-radius);
+    background: var(--paper-dark); cursor: pointer;
+    font-family: var(--font-display); font-size: 16px; font-weight: 300;
+    letter-spacing: 0.02em; text-transform: lowercase;
+    color: var(--ink); box-shadow: var(--inner-inset);
+    transition: all 0.15s;
+  }
+  .pull-rank-btn:hover { border-color: var(--ash); }
+  .pull-rank-btn.selected { border-color: var(--ink); background: var(--ink); color: var(--paper); box-shadow: none; }
+  /* Receive reading CTA */
+  .pull-receive-btn {
+    width: 100%; padding: 18px 24px;
+    background: var(--red-suit); color: #fff; border: none;
+    border-radius: var(--card-radius);
+    font-family: 'Montserrat', sans-serif; font-size: 9px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    cursor: pointer; transition: opacity 0.15s, transform 0.12s;
+    position: relative; overflow: hidden;
+    box-shadow: 0 2px 12px rgba(184,50,50,0.28);
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .pull-receive-btn::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(105deg, transparent 28%, rgba(255,255,255,0.15) 50%, transparent 72%);
+    background-size: 200% 100%;
+    animation: offeringShimmer 2.8s ease-in-out infinite; pointer-events: none;
+  }
+  .pull-receive-btn:disabled { opacity: 0.32; cursor: not-allowed; }
+  .pull-receive-btn:disabled::before { animation: none; }
+  .pull-receive-btn:not(:disabled):hover { opacity: 0.88; transform: translateY(-1px); }
   .reading-result { border-top: 1px solid var(--rule); padding-top: 36px; margin-top: 36px; }
   .reading-result-card { font-family: var(--font-display); font-size: 44px; font-weight: 400; letter-spacing: 0.01em; text-transform: lowercase; margin-bottom: 22px; color: var(--ink); }
   .reading-result-body { font-family: var(--font-body); font-size: 16px; line-height: 1.9; color: var(--ink); }
@@ -1681,7 +1787,77 @@ const GLOBAL_CSS = `
     to   { opacity:1; transform: none; }
   }
 
-  /* ── Offering screen (no pull yet) ── */
+  /* ── Offering expansion panel ── */
+  @keyframes offeringExpandIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .offering-expand {
+    width: 100%;
+    animation: offeringExpandIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
+    padding-bottom: 8px;
+  }
+  .offering-expand-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 20px 0 18px;
+  }
+  .offering-expand-rule {
+    flex: 1; height: 1px; background: var(--rule);
+  }
+  .offering-expand-or {
+    font-family: 'Montserrat', sans-serif; font-size: 7px;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--silver); font-weight: 500;
+  }
+  .offering-expand-eyebrow {
+    font-family: 'Montserrat', sans-serif; font-size: 7px;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--silver); font-weight: 500;
+    text-align: center; margin-bottom: 14px; display: block;
+  }
+  /* Suit + rank unified grid */
+  .offering-suit-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 8px; margin-bottom: 8px; width: 100%;
+  }
+  .offering-suit-btn {
+    aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--rule); border-radius: var(--card-radius);
+    background: var(--paper-dark); cursor: pointer;
+    box-shadow: var(--inner-inset); transition: all 0.15s;
+  }
+  .offering-suit-btn:hover { border-color: var(--ash); }
+  .offering-suit-btn.sel-black { border-color: var(--ink); background: var(--ink); }
+  .offering-suit-btn.sel-red   { border-color: var(--red-suit); background: var(--red-suit); }
+  .offering-rank-grid {
+    display: grid; grid-template-columns: repeat(13, 1fr);
+    gap: 4px; margin-bottom: 24px; width: 100%;
+  }
+  .offering-rank-btn {
+    padding: 9px 2px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--rule); border-radius: var(--card-radius);
+    background: var(--paper-dark); cursor: pointer;
+    font-family: var(--font-display); font-size: 13px; font-weight: 300;
+    letter-spacing: 0.02em; text-transform: lowercase;
+    color: var(--ink); box-shadow: var(--inner-inset); transition: all 0.15s;
+  }
+  .offering-rank-btn:hover { border-color: var(--ash); }
+  .offering-rank-btn.sel { border-color: var(--ink); background: var(--ink); color: var(--paper); box-shadow: none; }
+  /* Oracle CTA — same as offering-cta but with different copy state */
+  .offering-oracle-cta {
+    width: 100%; padding: 18px 24px;
+    background: var(--ink); color: var(--paper);
+    border: none; border-radius: var(--card-radius);
+    font-family: 'Montserrat', sans-serif; font-size: 9px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    cursor: pointer; transition: opacity 0.15s, transform 0.12s;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    box-shadow: var(--card-shadow);
+    position: relative; overflow: hidden;
+  }
+  .offering-oracle-cta:disabled { opacity: 0.32; cursor: not-allowed; }
+  .offering-oracle-cta:not(:disabled):hover { opacity: 0.82; }
 
   /* Staggered fade-in — slow, magical, top-to-bottom */
   @keyframes offerFade {
@@ -1691,7 +1867,9 @@ const GLOBAL_CSS = `
   .offering-screen {
     display: flex; flex-direction: column;
     align-items: center; padding: 0 0 160px;
-    gap: 0; overflow-x: hidden;
+    gap: 0;
+    /* do NOT clip — numerals must bleed past edges */
+    overflow: visible;
   }
 
   /* Universal page header */
@@ -1720,7 +1898,6 @@ const GLOBAL_CSS = `
     display: flex; flex-direction: column; align-items: center;
     margin-top: 44px; margin-bottom: 0;
     animation: offerFade 1s cubic-bezier(0.16,1,0.3,1) 0.22s both;
-    /* overflow visible so numerals bleed intentionally */
     overflow: visible;
   }
   .offering-date-bg {
@@ -1730,9 +1907,17 @@ const GLOBAL_CSS = `
     color: rgba(10,10,10,0.048);
     user-select: none; pointer-events: none;
     white-space: nowrap;
-    /* absolute so it bleeds past the stage width */
-    position: absolute; top: -24px; left: 50%; transform: translateX(-50%);
-    display: flex; gap: 0.05em;
+    /* Escape the app 720px container via negative margins + 100vw width */
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    gap: 0.05em;
+    z-index: 1;
+    /* clip-path none — let it bleed */
   }
   .dark .offering-date-bg { color: rgba(240,236,228,0.036); }
   .offering-date-editorial {
@@ -2044,10 +2229,10 @@ const GLOBAL_CSS = `
     margin-bottom: 8px;
   }
   .page-header-sub {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 14px; font-weight: 300;
-    font-style: italic; letter-spacing: 0.04em;
-    color: var(--ash); line-height: 1;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 8px; font-weight: 500;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--silver); line-height: 1;
   }
 
   /* ── ModuleHeader — reusable section eyebrow ─────────────────────────── */
@@ -2285,14 +2470,14 @@ function LoadingScreen({ card }) {
   const [activeSuit, setActiveSuit] = useState(0);
 
   useEffect(() => {
-    const suitInterval = setInterval(() => {
+    const interval = setInterval(() => {
       setActiveSuit(i => (i + 1) % 4);
     }, 260);
-    return () => clearInterval(suitInterval);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    const phraseInterval = setInterval(() => {
+    const interval = setInterval(() => {
       setVisible(false);
       setTimeout(() => {
         setPhraseIdx(i => {
@@ -2301,34 +2486,61 @@ function LoadingScreen({ card }) {
           return next;
         });
         setVisible(true);
-      }, 480);
-    }, 3400);
-    return () => clearInterval(phraseInterval);
+      }, 700);
+    }, 4200);
+    return () => clearInterval(interval);
   }, []);
+
+  // Custom SVG suit paths — fixed 32px, opacity only animates
+  const suitDefs = [
+    { suit:"spade",   red:false },
+    { suit:"diamond", red:true  },
+    { suit:"club",    red:false },
+    { suit:"heart",   red:true  },
+  ];
 
   return (
     <div className="loading-screen">
-      <div className="loading-eyebrow">Oracle</div>
+      <div className="loading-eyebrow">the oracle ponders</div>
 
       <div className="loading-suits">
-        {SUITS.map((s, i) => {
-          const isRed = s === "♥" || s === "♦";
-          const activeColor = isRed ? "#8b1212" : "rgba(245,242,237,0.92)";
-          const dimColor = isRed ? "rgba(139,18,18,0.22)" : "rgba(245,242,237,0.12)";
+        {suitDefs.map(({ suit, red }, i) => {
+          const isActive = i === activeSuit;
+          const activeColor  = red ? "#c94040" : "rgba(245,242,237,0.95)";
+          const dimColor     = red ? "rgba(201,64,64,0.2)" : "rgba(245,242,237,0.1)";
           return (
-            <div key={s} className="loading-suit" style={{
-              fontSize: i === activeSuit ? "40px" : "26px",
-              opacity: i === activeSuit ? 1 : 0.5,
-              color: i === activeSuit ? activeColor : dimColor,
-              filter: i === activeSuit ? `drop-shadow(0 0 12px ${isRed ? "rgba(139,18,18,0.55)" : "rgba(245,242,237,0.25)"})` : "none",
-            }}>{s}</div>
+            <div key={suit} className="loading-suit" style={{
+              opacity: isActive ? 1 : 0.4,
+              filter: isActive
+                ? `drop-shadow(0 0 10px ${red ? "rgba(201,64,64,0.5)" : "rgba(245,242,237,0.2)"})`
+                : "none",
+            }}>
+              <SuitIcon suit={suit} size={32} style={{ color: isActive ? activeColor : dimColor }}/>
+            </div>
           );
         })}
       </div>
 
-      {card && (
-        <div className="loading-card-name">{card}</div>
-      )}
+      {card && (() => {
+        const parsed = parseCard(card);
+        const isRed = parsed && RED_SUITS.has(parsed.suit);
+        const suitName = parsed?.suit === "spades" ? "spade"
+          : parsed?.suit === "hearts" ? "heart"
+          : parsed?.suit === "diamonds" ? "diamond"
+          : parsed?.suit === "clubs" ? "club" : null;
+        return (
+          <div className="loading-card-name">
+            {parsed?.rank ?? card}
+            {suitName && (
+              <SuitIcon
+                suit={suitName}
+                size={22}
+                style={{ color: isRed ? "#c94040" : "rgba(245,242,237,0.9)" }}
+              />
+            )}
+          </div>
+        );
+      })()}
 
       <div className="loading-divider" />
 
@@ -2898,10 +3110,10 @@ function SolitaireGame({ dark }) {
         position:"relative",
       }}>
         <div className="header-suits" style={{letterSpacing:"0.22em"}}>
-          <SuitIcon suit="spade" size={16}/>
+          <SuitIcon suit="spade"   size={16} style={{color:"var(--ink)"}}/>
           <SuitIcon suit="diamond" size={16} style={{color:"var(--red-suit)"}}/>
-          <SuitIcon suit="club" size={16}/>
-          <SuitIcon suit="heart" size={16} style={{color:"var(--red-suit)"}}/>
+          <SuitIcon suit="club"    size={16} style={{color:"var(--ink)"}}/>
+          <SuitIcon suit="heart"   size={16} style={{color:"var(--red-suit)"}}/>
         </div>
         <div className="header-title">the oblivion</div>
         {/* Tagline — Cormorant Unicase, no italic, readable */}
@@ -3774,10 +3986,10 @@ function PageHeader({ title, sub, onMenu, onSettings }) {
       <div className="page-header-topbar">
         <button className="page-header-menu-btn" onClick={onMenu||(()=>{})}>{BURGER}</button>
         <div className="page-header-suits">
-          <SuitIcon suit="spade" size={14}/>
+          <SuitIcon suit="spade"   size={14} style={{color:"var(--ink)"}}/>
           <SuitIcon suit="diamond" size={14} style={{color:"var(--red-suit)"}}/>
-          <SuitIcon suit="club" size={14}/>
-          <SuitIcon suit="heart" size={14} style={{color:"var(--red-suit)"}}/>
+          <SuitIcon suit="club"    size={14} style={{color:"var(--ink)"}}/>
+          <SuitIcon suit="heart"   size={14} style={{color:"var(--red-suit)"}}/>
         </div>
         <button className="page-header-menu-btn" onClick={onSettings||(()=>{})}>{DOTS}</button>
       </div>
@@ -4173,14 +4385,7 @@ ${pull?.reflection ? `Reflection: ${pull.reflection}` : ""}`;
 
   return (
     <div className="oracle-page">
-      {/* Header */}
-      <div className="oracle-page-header">
-        <div className="oracle-page-title">
-          <StarGlyph size={16} color="var(--red-suit)"/>
-          the oracle
-        </div>
-        <div className="oracle-page-meta">Oracle · Daily Divination</div>
-      </div>
+      <PageHeader title="the oracle" sub="ask. listen. return daily."/>
 
       {/* Message feed */}
       <div className="oracle-feed">
@@ -4334,7 +4539,7 @@ const ONBOARD_CSS = `
   }
   .ob-suit-cycle {
     position:absolute;
-    font-size:20px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
     animation:suitCycle 4s linear infinite;
     pointer-events:none; user-select:none;
     opacity:0;
@@ -4355,32 +4560,32 @@ const ONBOARD_CSS = `
   .ob-btn-google {
     width:100%; padding:16px 20px; margin-bottom:12px;
     background:rgba(240,236,228,0.06);
-    border:1px solid rgba(240,236,228,0.18);
+    border:1px solid rgba(240,236,228,0.22);
     border-radius:4px; cursor:pointer;
     font-family:'Montserrat',sans-serif;
     font-size:8px; font-weight:600;
     letter-spacing:0.22em; text-transform:uppercase;
-    color:rgba(240,236,228,0.75);
+    color:rgba(240,236,228,0.88);
     display:flex; align-items:center; justify-content:center; gap:10px;
     transition:all 0.2s;
   }
   .ob-btn-google:hover {
-    border-color:rgba(240,236,228,0.3);
+    border-color:rgba(240,236,228,0.4);
     color:#f0ece4;
-    background:rgba(240,236,228,0.1);
+    background:rgba(240,236,228,0.12);
   }
   .ob-btn-google svg { flex-shrink:0; }
 
-  /* Tertiary link style for guest */
+  /* Tertiary — guest — legible on dark bg */
   .ob-btn-tertiary {
     background:none; border:none; cursor:pointer;
     font-family:'Montserrat',sans-serif; font-size:7px;
     letter-spacing:0.18em; text-transform:uppercase;
-    color:rgba(240,236,228,0.22);
+    color:rgba(240,236,228,0.52);
     padding:12px 0; margin-top:4px;
     transition:color 0.2s;
   }
-  .ob-btn-tertiary:hover { color:rgba(240,236,228,0.45); }
+  .ob-btn-tertiary:hover { color:rgba(240,236,228,0.8); }
 
   .ob-divider {
     width:100%; display:flex; align-items:center; gap:12px;
@@ -4394,20 +4599,15 @@ const ONBOARD_CSS = `
     letter-spacing:0.14em; text-transform:uppercase;
     color:rgba(240,236,228,0.2);
   }
-  .ob-title {
-    font-size:13px; font-weight:300; letter-spacing:0.06em;
-    text-transform:lowercase; color:rgba(240,236,228,0.55);
-    text-align:center; margin-bottom:6px;
-  }
   .ob-heading {
     font-size:30px; font-weight:300; letter-spacing:0.03em;
-    text-transform:lowercase; text-align:center;
+    text-align:center;
     margin-bottom:10px; line-height:1.15;
   }
   .ob-sub {
     font-family:'Montserrat',sans-serif; font-size:10px;
     letter-spacing:0.16em; text-transform:uppercase;
-    color:rgba(240,236,228,0.4); text-align:center;
+    color:rgba(240,236,228,0.55); text-align:center;
     margin-bottom:40px; line-height:1.8;
   }
   .ob-input {
@@ -4506,24 +4706,45 @@ const ONBOARD_CSS = `
     letter-spacing:0.18em; text-transform:uppercase;
     color:rgba(240,236,228,0.55);
   }
+  /* Step top bar — back arrow left, dots center, spacer right */
+  .ob-progress-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    width:100%; margin-bottom:32px;
+  }
+  .ob-back {
+    width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+    background:none; border:none; cursor:pointer;
+    color:rgba(240,236,228,0.5); transition:color 0.2s; flex-shrink:0;
+  }
+  .ob-back:hover { color:rgba(240,236,228,0.9); }
   .ob-progress {
-    display:flex; gap:6px; margin-bottom:36px;
+    display:flex; gap:8px; align-items:center;
   }
   .ob-dot {
     width:5px; height:5px; border-radius:50%;
     background:rgba(240,236,228,0.18);
-    transition:background 0.3s;
+    transition:all 0.25s; cursor:pointer;
   }
-  .ob-dot.active { background:#8b1212; }
-  .ob-dot.done { background:rgba(240,236,228,0.4); }
+  .ob-dot:hover { background:rgba(240,236,228,0.45); transform:scale(1.3); }
+  .ob-dot.active { background:#c94040; transform:scale(1.2); }
+  .ob-dot.done { background:rgba(240,236,228,0.45); }
+  /* Big step numeral — Cormorant, ghost */
+  .ob-step-num {
+    font-family:'Cormorant Unicase',Georgia,serif;
+    font-size:88px; font-weight:300; line-height:1;
+    letter-spacing:-0.02em;
+    color:rgba(240,236,228,0.12);
+    text-align:center; margin-bottom:8px;
+    user-select:none; text-transform:lowercase;
+  }
   .ob-skip {
-    font-family:'Montserrat',sans-serif; font-size:6px;
+    font-family:'Montserrat',sans-serif; font-size:7px;
     letter-spacing:0.2em; text-transform:uppercase;
-    color:rgba(240,236,228,0.22); background:none; border:none;
+    color:rgba(240,236,228,0.48); background:none; border:none;
     cursor:pointer; padding:12px; margin-top:4px;
     transition:color 0.2s;
   }
-  .ob-skip:hover { color:rgba(240,236,228,0.45); }
+  .ob-skip:hover { color:rgba(240,236,228,0.82); }
   .ob-email-sent {
     text-align:center; padding:28px 0;
   }
@@ -4592,14 +4813,16 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
       <div className="ob-mark">
         <div className="ob-mark-inner">
           <OracleMark size={72}/>
-          <span className="ob-suit-cycle" style={{color:"rgba(240,236,228,0.55)"}}>♠</span>
-          <span className="ob-suit-cycle" style={{color:"rgba(224,64,64,0.7)"}}>♦</span>
-          <span className="ob-suit-cycle" style={{color:"rgba(240,236,228,0.55)"}}>♣</span>
-          <span className="ob-suit-cycle" style={{color:"rgba(224,64,64,0.7)"}}>♥</span>
+          <div className="ob-suit-cycle"><SuitIcon suit="spade"   size={20} style={{color:"rgba(240,236,228,0.55)"}}/></div>
+          <div className="ob-suit-cycle"><SuitIcon suit="diamond" size={20} style={{color:"rgba(224,64,64,0.7)"}}/></div>
+          <div className="ob-suit-cycle"><SuitIcon suit="club"    size={20} style={{color:"rgba(240,236,228,0.55)"}}/></div>
+          <div className="ob-suit-cycle"><SuitIcon suit="heart"   size={20} style={{color:"rgba(224,64,64,0.7)"}}/></div>
         </div>
       </div>
       <div className="ob-wordmark">oracle</div>
-      <div className="ob-tagline">a daily card practice</div>
+      <div className="ob-tagline-block">
+        <div className="ob-tagline">Daily Divination</div>
+      </div>
       <div className="ob-suits">
         <span>♠ </span><span className="red">♦ </span><span>♣ </span><span className="red">♥</span>
       </div>
@@ -4634,12 +4857,30 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
       <style>{ONBOARD_CSS}</style>
       <div className={`ob-screen ${exiting?"ob-exit":""}`}>
 
-        {/* Progress dots */}
+        {/* Step top bar — back, dots, spacer */}
         {stepIdx >= 0 && (
-          <div className="ob-progress">
-            {STEPS.map((s,i) => (
-              <div key={s} className={`ob-dot ${i===stepIdx?"active":i<stepIdx?"done":""}`}/>
-            ))}
+          <div className="ob-progress-bar">
+            <button className="ob-back" onClick={() => {
+              const prev = STEPS[stepIdx - 1];
+              if (prev) advance(prev);
+            }} style={{visibility: stepIdx === 0 ? "hidden" : "visible"}}>
+              <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="17" y1="7" x2="1" y2="7"/>
+                <polyline points="7,1 1,7 7,13"/>
+              </svg>
+            </button>
+            <div className="ob-progress">
+              {STEPS.slice(1).map((s,i) => {
+                const realIdx = i + 1;
+                return (
+                  <div key={s}
+                    className={`ob-dot ${realIdx===stepIdx?"active":realIdx<stepIdx?"done":""}`}
+                    onClick={() => { if (realIdx < stepIdx) advance(s); }}
+                  />
+                );
+              })}
+            </div>
+            <div style={{width:32}}/>
           </div>
         )}
 
@@ -4648,19 +4889,19 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
           <div className="ob-mark" style={{marginBottom:24}}>
             <div className="ob-mark-inner">
               <OracleMark size={56}/>
-              <span className="ob-suit-cycle" style={{color:"rgba(240,236,228,0.55)"}}>♠</span>
-              <span className="ob-suit-cycle" style={{color:"rgba(224,64,64,0.7)"}}>♦</span>
-              <span className="ob-suit-cycle" style={{color:"rgba(240,236,228,0.55)"}}>♣</span>
-              <span className="ob-suit-cycle" style={{color:"rgba(224,64,64,0.7)"}}>♥</span>
+              <div className="ob-suit-cycle"><SuitIcon suit="spade"   size={18} style={{color:"rgba(240,236,228,0.55)"}}/></div>
+              <div className="ob-suit-cycle"><SuitIcon suit="diamond" size={18} style={{color:"rgba(224,64,64,0.7)"}}/></div>
+              <div className="ob-suit-cycle"><SuitIcon suit="club"    size={18} style={{color:"rgba(240,236,228,0.55)"}}/></div>
+              <div className="ob-suit-cycle"><SuitIcon suit="heart"   size={18} style={{color:"rgba(224,64,64,0.7)"}}/></div>
             </div>
           </div>
           <div className="ob-heading" style={{marginBottom:8}}>
-            a daily practice.<br/>your cards.<br/>your voice.
+            Oracle.<br/>Daily Divination.
           </div>
           <div className="ob-sub">
-            cartomancy has guided seekers<br/>
-            since 14th-century europe.<br/>
-            this is your practice now.
+            Seekers have asked the cards for centuries.<br/>
+            The questions never really change.<br/>
+            One card. One day. One question.
           </div>
 
           {/* Primary — email */}
@@ -4693,7 +4934,7 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
 
         {/* EMAIL */}
         {step === "email" && <>
-          <div className="ob-title">step one</div>
+          <div className="ob-step-num">1</div>
           <div className="ob-heading">your email.</div>
           <div className="ob-sub">
             we send a magic link.<br/>no password. ever.
@@ -4733,7 +4974,7 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
 
         {/* NAME */}
         {step === "name" && <>
-          <div className="ob-title">step two</div>
+          <div className="ob-step-num">2</div>
           <div className="ob-heading">what should<br/>the oracle call you?</div>
           <div className="ob-sub">first name is fine.</div>
           <input
@@ -4755,7 +4996,7 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
 
         {/* DECK */}
         {step === "deck" && <>
-          <div className="ob-title">step three</div>
+          <div className="ob-step-num">3</div>
           <div className="ob-heading">your modality.</div>
           <div className="ob-sub" style={{marginBottom:24}}>
             choose your primary deck.<br/>you can change this anytime.
@@ -4783,7 +5024,7 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
 
         {/* INTENTION */}
         {step === "intention" && <>
-          <div className="ob-title">step four</div>
+          <div className="ob-step-num">4</div>
           <div className="ob-heading">
             what are you<br/>seeking?
           </div>
@@ -4846,7 +5087,7 @@ export default function OracleApp() {
   const [onboardName, setOnboardName] = useState("");
   const [onboardIntention, setOnboardIntention] = useState("");
   const [onboardDeck, setOnboardDeck] = useState("playing");
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [calView, setCalView] = useState("calendar");
   const [calYear, setCalYear] = useState(2026);
   const [calMonth, setCalMonth] = useState(2); // 0-indexed March
@@ -4869,6 +5110,7 @@ export default function OracleApp() {
   const [pullCard, setPullCard] = useState("");
   const [pullIntention, setPullIntention] = useState("");
   const [offeringIntention, setOfferingIntention] = useState("");
+  const [offeringExpanded, setOfferingExpanded] = useState(false); // selector panel open
   const [isRecording, setIsRecording] = React.useState(false);
   const [chatExpanded, setChatExpanded] = React.useState(false);
   const [chatRecording, setChatRecording] = React.useState(false);
@@ -5049,21 +5291,15 @@ export default function OracleApp() {
       else if (el < T_FACE)   setDrawPhase("flip");
       else if (el < TOTAL)    setDrawPhase("face");
       else {
-        // Animation done — pick a random card and go to pull form
+        // Animation done — reveal card on home page, expand selector with card pre-selected
         setDrawPhase("done");
         setDrawAnim("revealing");
         setTimeout(() => {
           const picked = drawDeck[26] || drawDeck[0];
-          // suits in drawDeck are already plural: "spades","hearts","diamonds","clubs"
           const suitSym = picked.suit==="spades"?"♠":picked.suit==="hearts"?"♥":picked.suit==="diamonds"?"♦":"♣";
           const cardStr = picked.rank + suitSym;
-          setPullDeck(defaultDeck);
-          setPullStyle(defaultStyle);
-          setPullMode("random");
-          setRandomCard(cardStr); // store as string "7♣" not object
-          setShowReveal(true);
           setPullCard(cardStr);
-          setActiveTab("pull");
+          setOfferingExpanded(true);
           setTimeout(() => {
             setDrawAnim("fadeout");
             setTimeout(() => {
@@ -5093,6 +5329,7 @@ export default function OracleApp() {
       setPullCard(""); setPullIntention(""); setPullReading(null);
       setPullSaved(false); setPullLoading(false);
       setPullOracleMessages([]); setOfferingIntention("");
+      setOfferingExpanded(false);
       setTimeout(() => setIsNewPull(false), 4000);
     }, 1200);
   };
@@ -5383,136 +5620,137 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
   };
 
   const renderPullForm = () => {
-    const cardCount = pullDeck === "tarot" ? "78" : "54";
-    const deckLabel = pullDeck === "tarot" ? "tarot" : pullDeck === "oracle" ? "oracle deck" : "playing cards";
+    const selectedSuit = pullCard && !pullCard.startsWith("?") ? parseCard(pullCard)?.suit : (pullCard?.startsWith("?") ? Object.keys({spades:"♠",hearts:"♥",diamonds:"♦",clubs:"♣"}).find(k => pullCard.includes({spades:"♠",hearts:"♥",diamonds:"♦",clubs:"♣"}[k])) : null);
+    const selectedRank = pullCard && !pullCard.startsWith("?") ? parseCard(pullCard)?.rank : null;
+
+    const suits = [
+      { key:"spades",   sym:"spade",   red:false },
+      { key:"diamonds", sym:"diamond", red:true  },
+      { key:"clubs",    sym:"club",    red:false },
+      { key:"hearts",   sym:"heart",   red:true  },
+    ];
+    const SUIT_SYM = { spades:"♠", hearts:"♥", diamonds:"♦", clubs:"♣" };
+    const allRanks = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+
+    const selectRank = (rank) => {
+      if (!selectedSuit) { setPullCard(rank + "?"); return; }
+      setPullCard(rank + SUIT_SYM[selectedSuit]);
+    };
+    const selectSuit = (suitKey) => {
+      const sym = SUIT_SYM[suitKey];
+      if (selectedRank) setPullCard(selectedRank + sym);
+      else setPullCard("?" + sym);
+    };
+
+    // Derive clean card string — only valid if both suit and rank known
+    const hasValidCard = selectedSuit && selectedRank;
 
     return (
     <div className="pull-form" style={{animation: drawAnim==="fadeout" ? "drawFadeIn 0.8s ease 0.3s both" : undefined}}>
       {pullLoading && <LoadingScreen card={pullCard} />}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"36px"}}>
-        <button className="back-btn" style={{margin:0}} onClick={()=>{
-          setActiveTab("home"); setPullReading(null); setPullCard("");
-          setPullIntention(""); setRandomCard(null); setShowReveal(false);
-        }}>← back</button>
-        <button className="dots-menu-btn" onClick={()=>setActiveTab("profile")}><svg width="14" height="14" viewBox="0 0 4 16" fill="currentColor"><circle cx="2" cy="2" r="1.2"/><circle cx="2" cy="8" r="1.2"/><circle cx="2" cy="14" r="1.2"/></svg></button>
-      </div>
 
       {!pullReading ? (
         <>
-          {/* Deck selector */}
-          <div className="form-field">
-            <label className="form-label">Deck</label>
-            <div className="deck-chips">
-              {[["playing","Playing Cards"],["tarot","Tarot"],["oracle","Oracle"]].map(([v,l])=>(
-                <button key={v} className={`deck-chip ${pullDeck===v?"selected":""}`}
-                  onClick={()=>{ setPullDeck(v); setRandomCard(null); setShowReveal(false); setPullCard(""); }}>
-                  {l}
+          {/* Universal page header */}
+          <PageHeader
+            title="pull your card"
+            sub="name what the cards revealed."
+          />
+
+          {/* Oracle choose CTA — triggers the draw animation */}
+          <button className="offering-cta" style={{marginBottom:"32px"}}
+            onClick={startDrawAnimation}>
+            <SuitIcon suit="spade"   size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+            <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+            let the oracle choose
+            <SuitIcon suit="club"    size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+            <SuitIcon suit="heart"   size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+          </button>
+
+          {/* Inline intention */}
+          <div className="pull-intention-row">
+            <textarea
+              className="pull-intention-text"
+              rows={1}
+              placeholder="State your intention or question…"
+              value={pullIntention}
+              onChange={e => setPullIntention(e.target.value)}
+            />
+            <button className="pull-intention-edit">edit</button>
+          </div>
+
+          {/* Eyebrow — centered, mysterious */}
+          <div style={{
+            fontFamily:"'Montserrat',sans-serif", fontSize:"7px",
+            letterSpacing:"0.28em", textTransform:"uppercase",
+            color:"var(--silver)", fontWeight:500,
+            textAlign:"center", marginBottom:"16px",
+          }}>drawn by your own hand</div>
+
+          {/* Unified card selector — suits then all ranks together */}
+          <div className="pull-suit-grid" style={{marginBottom:"8px"}}>
+            {suits.map(({ key, sym, red }) => {
+              const isSelected = selectedSuit === key;
+              return (
+                <button
+                  key={key}
+                  className={`pull-suit-btn ${isSelected ? (red ? "selected-red" : "selected") : ""}`}
+                  onClick={() => selectSuit(key)}
+                >
+                  <SuitIcon
+                    suit={sym}
+                    size={28}
+                    style={{color: isSelected ? "#fff" : red ? "var(--red-suit)" : "var(--ink)"}}
+                  />
                 </button>
+              );
+            })}
+          </div>
+
+          {/* All 13 ranks in one grid */}
+          <div style={{
+            display:"grid", gridTemplateColumns:"repeat(13,1fr)",
+            gap:"4px", marginBottom:"32px",
+          }}>
+            {allRanks.map(r => (
+              <button
+                key={r}
+                className={`pull-rank-btn ${selectedRank===r?"selected":""}`}
+                style={{padding:"10px 2px", fontSize:"13px"}}
+                onClick={() => selectRank(r)}
+              >{r}</button>
+            ))}
+          </div>
+
+          {/* Reading depth */}
+          <div className="form-field">
+            <label className="form-label">Reading Depth</label>
+            <div className="style-chips">
+              {[["whisper","Whisper","3-5 lines"],["dialogue","Dialogue","2-3 paragraphs"],["immersion","Immersion","Full narrative"]].map(([v,n,d])=>(
+                <div key={v} className={`style-chip ${pullStyle===v?"selected":""}`} onClick={()=>setPullStyle(v)}>
+                  <div className="style-chip-name">{n}</div>
+                  <div className="style-chip-desc">{d}</div>
+                </div>
               ))}
             </div>
           </div>
 
-          {/* Hero draw block — primary action */}
-          <div className="pull-hero">
-            <div className="pull-hero-label">{cardCount} cards</div>
-            <div className="pull-hero-suits" aria-hidden="true">
-              <SuitIcon suit="spade" size={14}/>
-              <SuitIcon suit="diamond" size={14} style={{color:"var(--red-suit)"}}/>
-              <SuitIcon suit="club" size={14}/>
-              <SuitIcon suit="heart" size={14} style={{color:"var(--red-suit)"}}/>
-            </div>
-            <button
-              className="pull-hero-count"
-              onClick={()=>{ setPullMode("random"); setPullCard(""); drawRandom(); }}
-            >
-              draw a card
-            </button>
-            <div className="pull-hero-sub">{deckLabel} · random draw</div>
-          </div>
+          {/* Receive reading CTA */}
+          <button
+            className="pull-receive-btn"
+            disabled={!hasValidCard || pullLoading}
+            onClick={generateReading}
+          >
+            <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+            receive your reading
+            <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+          </button>
 
-          {/* Secondary row — Manual | Photo */}
-          <div className="pull-secondary-row">
-            <button
-              className={`pull-mode-btn ${pullMode==="manual"?"active":""}`}
-              onClick={()=>{ setPullMode("manual"); setRandomCard(null); setShowReveal(false); }}
-            >
-              I have a deck
-            </button>
-            <button className="pull-mode-photo" disabled>
-              Photo
-            </button>
-          </div>
-
-          {/* Manual input — shown when manual mode active */}
-          {pullMode === "manual" && (
-            <div className="form-field" style={{animation:"fi 0.25s ease"}}>
-              <label className="form-label">Card Drawn</label>
-              <input
-                className="form-input"
-                placeholder={pullDeck==="playing" ? "e.g. A♦, Q♣, 8♠, Joker" : "e.g. The Fool, 3 of Cups"}
-                value={pullCard}
-                onChange={e=>setPullCard(e.target.value)}
-                autoFocus
-              />
-            </div>
-          )}
-
-          {/* Random reveal */}
-          {pullMode === "random" && showReveal && (
-            <div style={{animation:"fi 0.25s ease", marginBottom:"24px"}}>
-              <CardReveal
-                card={randomCard}
-                onComplete={()=>{ setPullCard(randomCard); }}
-              />
-              {randomCard && pullCard === randomCard && (
-                <div style={{
-                  display:"flex", gap:"10px", justifyContent:"center",
-                  marginTop:"8px", animation:"fi 0.3s ease",
-                }}>
-                  <button className="context-btn" onClick={()=>{
-                    setRandomCard(null); setShowReveal(false); setPullCard("");
-                  }}>Draw again</button>
-                  <button className="submit-btn" onClick={()=>{}}>
-                    Accept this card →
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Intention + depth + submit — shared */}
-          {(pullMode === "manual" || (pullMode === "random" && pullCard)) && (
-            <div style={{animation:"fi 0.3s ease"}}>
-              <div className="form-field">
-                <label className="form-label">Intention or Context <span style={{opacity:0.4}}>(optional)</span></label>
-                <textarea
-                  className="form-textarea"
-                  placeholder="What's present for you today? What question or situation are you holding?"
-                  value={pullIntention}
-                  onChange={e=>setPullIntention(e.target.value)}
-                  rows={3}
-                />
-              </div>
-              <div className="form-field">
-                <label className="form-label">Reading Depth</label>
-                <div className="style-chips">
-                  {[["whisper","Whisper","3-5 lines"],["dialogue","Dialogue","2-3 paragraphs"],["immersion","Immersion","Full narrative"]].map(([v,n,d])=>(
-                    <div key={v} className={`style-chip ${pullStyle===v?"selected":""}`} onClick={()=>setPullStyle(v)}>
-                      <div className="style-chip-name">{n}</div>
-                      <div className="style-chip-desc">{d}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <button
-                className="submit-btn"
-                disabled={!pullCard.trim() || pullLoading}
-                onClick={generateReading}
-              >
-                Receive Reading →
-              </button>
-            </div>
-          )}
+          {/* Back */}
+          <button className="back-btn" style={{margin:"20px auto 0",display:"flex",justifyContent:"center"}}
+            onClick={()=>{ setActiveTab("home"); setPullReading(null); setPullCard(""); setPullIntention(""); setRandomCard(null); setShowReveal(false); }}>
+            ← back
+          </button>
         </>
       ) : (
         /* ── IMMERSIVE READING SCREEN ── */
@@ -5956,7 +6194,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
 
   const renderSettings = () => (
     <div className="settings-page fi">
-      <div className="settings-page-header">settings</div>
+      <PageHeader title="settings" sub="your practice, your way."/>
 
       {/* Appearance */}
       <div className="settings-section">
@@ -6075,17 +6313,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
 
     return (
     <div className="origin-page fi">
-      {/* Header eyebrow */}
-      <div className="origin-header">
-        <span>Oracle · Your Origin</span>
-        <button style={{background:"none",border:"none",cursor:"pointer",color:"var(--ash)",
-          fontFamily:"'Montserrat',sans-serif",fontSize:"7px",letterSpacing:"0.18em",textTransform:"uppercase"}}
-          onClick={()=>setActiveTab("settings")}>
-          settings →
-        </button>
-      </div>
-
-      <div className="origin-title">The Origin</div>
+      <PageHeader title="the origin" sub="who you are. where you've been." onSettings={()=>setActiveTab("settings")}/>
 
       {/* Avatar + name + bio */}
       <div className="origin-avatar-wrap">
@@ -6282,10 +6510,10 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
           {activeTab === "home" && (
             <div className="offering-page-header">
               <div className="header-suits">
-                <SuitIcon suit="spade" size={14}/>
+                <SuitIcon suit="spade"   size={14} style={{color:"var(--ink)"}}/>
                 <SuitIcon suit="diamond" size={14} style={{color:"var(--red-suit)"}}/>
-                <SuitIcon suit="club" size={14}/>
-                <SuitIcon suit="heart" size={14} style={{color:"var(--red-suit)"}}/>
+                <SuitIcon suit="club"    size={14} style={{color:"var(--ink)"}}/>
+                <SuitIcon suit="heart"   size={14} style={{color:"var(--red-suit)"}}/>
               </div>
               <div className="header-title">the offering</div>
               <div className="offering-page-subhead">your daily draw awaits</div>
@@ -6302,29 +6530,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
             {activeTab === "reading" && renderReading()}
             {activeTab === "archive" && (
               <>
-                {/* Vault page header */}
-                <div className="vault-header">
-                  <div className="vault-topbar">
-                    {/* Left slot — reserved for future use */}
-                    <div className="vault-topbar-slot"/>
-                    {/* Centered title */}
-                    <div className="vault-title">the observatory</div>
-                    {/* Right slot — settings */}
-                    <div className="vault-topbar-slot">
-                      <button
-                        className="vault-settings-btn"
-                        onClick={()=>setActiveTab("profile")}
-                        title="Settings"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 4 16" fill="currentColor">
-                          <circle cx="2" cy="2" r="1.2"/>
-                          <circle cx="2" cy="8" r="1.2"/>
-                          <circle cx="2" cy="14" r="1.2"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <PageHeader title="the observatory" sub="every card you've ever pulled." onSettings={()=>setActiveTab("settings")}/>
 
                 {/* Full-width tab bar */}
                 <div className="vault-tabs">
@@ -6368,12 +6574,10 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
                         "Thursday","Friday","Saturday"][d.getDay()];
                       return (
                         <div className="offering-date-stage">
-                          {/* Massive ghost numerals — bleed past frame is intentional */}
                           <div className="offering-date-bg" style={{fontSize:"clamp(240px,68vw,340px)"}}>
                             <span>{padded[0]}</span>
                             <span>{padded[1]}</span>
                           </div>
-                          {/* Editorial date row */}
                           <div className="offering-date-editorial">
                             <div className="offering-date-top">
                               <span className="offering-date-num">{dayNum}</span>
@@ -6386,9 +6590,23 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
                       );
                     })()}
 
-                    {/* O card back — floating, glowing */}
-                    <div className="offering-card-wrap" onClick={startDrawAnimation}>
-                      <CardBack size={260} dark={darkMode}/>
+                    {/* O card back — tapping expands the selector */}
+                    <div className="offering-card-wrap"
+                      onClick={()=>setOfferingExpanded(true)}>
+                      {(() => {
+                        // If a card has been oracle-selected, show the face card
+                        if (pullCard && !pullCard.startsWith("?") && offeringExpanded) {
+                          const parsed = parseCard(pullCard);
+                          if (parsed) {
+                            return (
+                              <div style={{animation:"cardFlipIn 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards"}}>
+                                <SmartCard cardStr={pullCard} size={Math.min(260, Math.round(window.innerWidth * 0.58))}/>
+                              </div>
+                            );
+                          }
+                        }
+                        return <CardBack size={Math.min(260, Math.round(window.innerWidth * 0.58))} dark={darkMode}/>;
+                      })()}
                     </div>
 
                     {/* Intention — visible input box */}
@@ -6453,28 +6671,141 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
                       </button>
                     </div>
 
+                    {/* Expansion panel — fades in when offeringExpanded */}
+                    {offeringExpanded && (() => {
+                      const SUIT_SYM = { spades:"♠", hearts:"♥", diamonds:"♦", clubs:"♣" };
+                      const suits = [
+                        { key:"spades",   sym:"spade",   red:false },
+                        { key:"diamonds", sym:"diamond", red:true  },
+                        { key:"clubs",    sym:"club",    red:false },
+                        { key:"hearts",   sym:"heart",   red:true  },
+                      ];
+                      const allRanks = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+                      const selSuit = pullCard && !pullCard.startsWith("?")
+                        ? parseCard(pullCard)?.suit
+                        : pullCard?.length > 1
+                          ? Object.keys(SUIT_SYM).find(k => pullCard.endsWith(SUIT_SYM[k]))
+                          : null;
+                      const selRank = pullCard && !pullCard.startsWith("?")
+                        ? parseCard(pullCard)?.rank
+                        : null;
+                      const hasCard = selSuit && selRank;
+
+                      const selectSuit = (key) => {
+                        const sym = SUIT_SYM[key];
+                        if (selRank) setPullCard(selRank + sym);
+                        else setPullCard("?" + sym);
+                      };
+                      const selectRank = (rank) => {
+                        const sym = selSuit ? SUIT_SYM[selSuit] : "?";
+                        setPullCard(rank + sym);
+                      };
+
+                      return (
+                        <div className="offering-expand">
+                          {/* Oracle choose — red CTA */}
+                          <button className="offering-cta" onClick={()=>{
+                            setPullIntention(offeringIntention);
+                            startDrawAnimation();
+                          }}>
+                            <SuitIcon suit="spade"   size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                            <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                            let the oracle choose
+                            <SuitIcon suit="club"    size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                            <SuitIcon suit="heart"   size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                          </button>
+
+                          {/* Divider */}
+                          <div className="offering-expand-divider">
+                            <div className="offering-expand-rule"/>
+                            <span className="offering-expand-or">or</span>
+                            <div className="offering-expand-rule"/>
+                          </div>
+
+                          {/* Eyebrow */}
+                          <span className="offering-expand-eyebrow">drawn by your own hand</span>
+
+                          {/* Suit grid */}
+                          <div className="offering-suit-grid">
+                            {suits.map(({ key, sym, red }) => {
+                              const isSel = selSuit === key;
+                              return (
+                                <button key={key}
+                                  className={`offering-suit-btn ${isSel ? (red ? "sel-red" : "sel-black") : ""}`}
+                                  onClick={() => selectSuit(key)}>
+                                  <SuitIcon suit={sym} size={26}
+                                    style={{color: isSel ? "#fff" : red ? "var(--red-suit)" : "var(--ink)"}}/>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Rank grid */}
+                          <div className="offering-rank-grid">
+                            {allRanks.map(r => (
+                              <button key={r}
+                                className={`offering-rank-btn ${selRank===r?"sel":""}`}
+                                onClick={() => selectRank(r)}>{r}</button>
+                            ))}
+                          </div>
+
+                          {/* Bottom CTA — changes when card selected */}
+                          {hasCard ? (
+                            <button className="offering-oracle-cta"
+                              onClick={()=>{
+                                setPullIntention(offeringIntention);
+                                setPullStyle(defaultStyle);
+                                setPullDeck(defaultDeck);
+                                setOfferingExpanded(false);
+                                setActiveTab("pull");
+                                // generateReading is called in pull form on mount when pullCard is set
+                                // trigger it via a small delay so the tab switch renders first
+                                setTimeout(() => generateReading(), 80);
+                              }}>
+                              <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.6)"}}/>
+                              hear what the cards say
+                              <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.6)"}}/>
+                            </button>
+                          ) : (
+                            <button className="offering-cta" style={{opacity:0.4,cursor:"default",animation:"none"}} disabled>
+                              <SuitIcon suit="spade"   size={10} style={{color:"rgba(255,255,255,0.5)"}}/>
+                              <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.5)"}}/>
+                              choose your card above
+                              <SuitIcon suit="club"    size={10} style={{color:"rgba(255,255,255,0.5)"}}/>
+                              <SuitIcon suit="heart"   size={10} style={{color:"rgba(255,255,255,0.5)"}}/>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {/* Week at a glance */}
                     <WeekBar
                       pulls={pulls}
                       today={today}
                       contextProfile={contextProfile}
                       onDayTap={(pull) => { setReflectionDraft(pull.reflection||""); setSelectedEntry(pull); }}
-                      onPullTap={() => { setPullIntention(offeringIntention); setActiveTab("pull"); }}
+                      onPullTap={() => setOfferingExpanded(true)}
                       onNavigateToObservatory={() => setActiveTab("archive")}
                     />
 
                   </div>
 
-                  {/* Sticky CTA — fixed above bottom nav, only shown on home with no pull */}
-                  <div className="offering-sticky-cta">
-                    <button className="offering-cta" onClick={startDrawAnimation}>
-                      <SuitIcon suit="spade"   size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
-                      <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
-                      pull your card
-                      <SuitIcon suit="club"    size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
-                      <SuitIcon suit="heart"   size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
-                    </button>
-                  </div>
+                  {/* Sticky CTA — opens expansion panel */}
+                  {!offeringExpanded && (
+                    <div className="offering-sticky-cta">
+                      <button className="offering-cta" onClick={()=>{
+                        setPullIntention(offeringIntention);
+                        setOfferingExpanded(true);
+                      }}>
+                        <SuitIcon suit="spade"   size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                        <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                        pull your card
+                        <SuitIcon suit="club"    size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                        <SuitIcon suit="heart"   size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                      </button>
+                    </div>
+                  )}
                   </>
                 ) : (
                   <HeroCard
