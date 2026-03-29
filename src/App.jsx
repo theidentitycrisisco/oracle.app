@@ -7436,7 +7436,6 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
           );
         })()}
 
-        </div>{/* end .app */}
         </div>{/* end .desktop-center */}
 
         {/* Bottom Nav — mobile only */}
