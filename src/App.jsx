@@ -1,5 +1,35 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from "react";
 
+// localStorage shim — matches the window.storage API shape used throughout
+// (window.storage only exists inside Claude artifacts; this makes the app work in real browsers)
+const storage = {
+  get: (key) => {
+    try {
+      const val = localStorage.getItem(key);
+      if (val === null) throw new Error("not found");
+      return Promise.resolve({ key, value: val });
+    } catch {
+      return Promise.reject(new Error("not found"));
+    }
+  },
+  set: (key, value) => {
+    try {
+      localStorage.setItem(key, value);
+      return Promise.resolve({ key, value });
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  },
+  delete: (key) => {
+    try {
+      localStorage.removeItem(key);
+      return Promise.resolve({ key, deleted: true });
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  },
+};
+
 const DarkContext = createContext(false);
 
 const GLOBAL_CSS = `
@@ -553,10 +583,14 @@ const GLOBAL_CSS = `
 
   /* Fixed input bar */
   .oracle-input-row {
-    flex-shrink: 0;
-    padding: 12px 24px 32px; border-top: 1px solid var(--rule);
+    position: fixed;
+    bottom: 56px; left: 0; right: 0;
+    z-index: 95;
+    padding: 10px 16px 12px;
+    border-top: 1px solid var(--rule);
     display: flex; gap: 10px; align-items: flex-end;
     background: var(--paper);
+    max-width: 720px; margin: 0 auto;
   }
   .oracle-input {
     flex: 1; background: var(--paper-dark); border: 1px solid var(--rule);
@@ -566,14 +600,33 @@ const GLOBAL_CSS = `
     line-height: 1.5; transition: border-color 0.15s;
   }
   .oracle-input:focus { border-color: var(--ash); }
+  /* Red send button — spade rotated 90deg as arrow */
   .oracle-send {
     width: 44px; height: 44px; border-radius: 50%;
-    background: var(--ink); color: var(--paper);
+    background: var(--red-suit); color: #fff;
     display: flex; align-items: center; justify-content: center;
     border: none; cursor: pointer; flex-shrink: 0; transition: opacity 0.15s;
   }
-  .oracle-send:disabled { opacity: 0.3; cursor: default; }
-  .oracle-send:not(:disabled):hover { opacity: 0.75; }
+  .oracle-send:disabled { opacity: 0.32; cursor: default; }
+  .oracle-send:not(:disabled):hover { opacity: 0.8; }
+  /* Suit thinking indicator — 4 suits blink in sequence while oracle responds */
+  .oracle-thinking {
+    display: flex; gap: 14px; align-items: center; justify-content: center;
+    padding: 10px 0 4px;
+  }
+  .oracle-thinking-suit {
+    opacity: 0.12;
+    animation: thinkBlink 1.6s ease-in-out infinite;
+  }
+  .oracle-thinking-suit:nth-child(1) { animation-delay: 0s; }
+  .oracle-thinking-suit:nth-child(2) { animation-delay: 0.2s; }
+  .oracle-thinking-suit:nth-child(3) { animation-delay: 0.4s; }
+  .oracle-thinking-suit:nth-child(4) { animation-delay: 0.6s; }
+  @keyframes thinkBlink {
+    0%,100% { opacity: 0.12; }
+    30%     { opacity: 0.9; }
+    60%     { opacity: 0.12; }
+  }
 
   /* Oracle open button on home/archive (small link style) */
   .oracle-open-btn {
@@ -4047,7 +4100,7 @@ function WeekBar({ pulls, today, contextProfile, onDayTap, onPullTap, onNavigate
       try {
         const res = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
           body: JSON.stringify({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 40,
@@ -4287,7 +4340,7 @@ function OraclePage({ pulls, contextProfile, today, onNavigateToDay }) {
       const msgs = [];
       for (const dateKey of sortedDates) {
         try {
-          const stored = await window.storage.get(`oracle_convo_${dateKey}`);
+          const stored = await storage.get(`oracle_convo_${dateKey}`);
           if (stored) {
             const convo = JSON.parse(stored.value);
             if (convo.length > 0) {
@@ -4316,7 +4369,7 @@ function OraclePage({ pulls, contextProfile, today, onNavigateToDay }) {
     const convoMsgs = msgs
       .filter(m => m.type === "msg" && m.dateKey === dateKey)
       .map(m => ({ role: m.role, content: m.content }));
-    try { await window.storage.set(`oracle_convo_${dateKey}`, JSON.stringify(convoMsgs)); } catch {}
+    try { await storage.set(`oracle_convo_${dateKey}`, JSON.stringify(convoMsgs)); } catch {}
   };
 
   const sendMessage = async () => {
@@ -4354,7 +4407,7 @@ ${pull?.reflection ? `Reflection: ${pull.reflection}` : ""}`;
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
         body: JSON.stringify({
           // Haiku for cost efficiency — trim history to last 8 messages
           model: "claude-haiku-4-5-20251001",
@@ -4442,11 +4495,11 @@ ${pull?.reflection ? `Reflection: ${pull.reflection}` : ""}`;
         })}
 
         {loading && (
-          <div className="oracle-msg">
-            <div className="oracle-msg-avatar"><StarGlyph size={13} color="currentColor"/></div>
-            <div className="oracle-msg-bubble typing">
-              <div className="oracle-dot"/><div className="oracle-dot"/><div className="oracle-dot"/>
-            </div>
+          <div className="oracle-thinking" style={{paddingBottom:"8px"}}>
+            <div className="oracle-thinking-suit"><SuitIcon suit="spade"   size={14} style={{color:"var(--ink)"}}/></div>
+            <div className="oracle-thinking-suit"><SuitIcon suit="diamond" size={14} style={{color:"var(--red-suit)"}}/></div>
+            <div className="oracle-thinking-suit"><SuitIcon suit="club"    size={14} style={{color:"var(--ink)"}}/></div>
+            <div className="oracle-thinking-suit"><SuitIcon suit="heart"   size={14} style={{color:"var(--red-suit)"}}/></div>
           </div>
         )}
         <div ref={feedEndRef}/>
@@ -4464,9 +4517,7 @@ ${pull?.reflection ? `Reflection: ${pull.reflection}` : ""}`;
           rows={1}
         />
         <button className="oracle-send" onClick={sendMessage} disabled={!input.trim() || loading}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
+          <SuitIcon suit="spade" size={16} style={{color:"#fff", transform:"rotate(90deg)", display:"block"}}/>
         </button>
       </div>
     </div>
@@ -4792,12 +4843,12 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
     const userData = { name, email, deck, intention,
       joinedAt: new Date().toISOString() };
     try {
-      await window.storage.set("oracle_user", JSON.stringify(userData));
+      await storage.set("oracle_user", JSON.stringify(userData));
       // Build context profile from onboarding data
       const deckLabel = deck === "playing" ? "traditional 52-card playing cards" : "78-card tarot";
       const intentionPart = intention ? " Their current intention or focus: " + intention + "." : "";
       const ctx = "You are reading for " + (name || "a seeker") + ", who practices daily card pulls as a ritual of reflection and guidance. Their preferred deck: " + deckLabel + "." + intentionPart + " This is a disciplined, reflective practice — not a casual horoscope check. Speak with care, directness, and honesty.";
-      await window.storage.set("oracle_context", ctx);
+      await storage.set("oracle_context", ctx);
     } catch {}
     setTimeout(() => {
       setExiting(false);
@@ -5157,10 +5208,10 @@ export default function OracleApp() {
       HISTORICAL_PULLS.forEach(p => { base[p.date] = p; });
       try {
         // Check for existing user — skip onboarding if found
-        const userStored = await window.storage.get("oracle_user");
-        const stored = await window.storage.get("oracle_pulls");
-        const ctx = await window.storage.get("oracle_context");
-        const prefs = await window.storage.get("oracle_prefs");
+        const userStored = await storage.get("oracle_user");
+        const stored = await storage.get("oracle_pulls");
+        const ctx = await storage.get("oracle_context");
+        const prefs = await storage.get("oracle_prefs");
         setPulls(stored ? { ...base, ...JSON.parse(stored.value) } : base);
         if (ctx) { setContextProfile(ctx.value); setContextSaved(true); setContextEditing(false); }
         if (userStored) {
@@ -5185,7 +5236,7 @@ export default function OracleApp() {
           }
           if (p.defaultDeck) { setDefaultDeck(p.defaultDeck); setPullDeck(p.defaultDeck); }
           if (p.defaultStyle) { setDefaultStyle(p.defaultStyle); setPullStyle(p.defaultStyle); }
-          try { const rm = await window.storage.get('oracle_resonance'); if (rm) setResonanceMap(JSON.parse(rm.value)); } catch {}
+          try { const rm = await storage.get('oracle_resonance'); if (rm) setResonanceMap(JSON.parse(rm.value)); } catch {}
         }
       } catch {
         setPulls(base);
@@ -5197,7 +5248,7 @@ export default function OracleApp() {
   }, []);
 
   const savePrefs = async (prefs) => {
-    try { await window.storage.set("oracle_prefs", JSON.stringify(prefs)); } catch {}
+    try { await storage.set("oracle_prefs", JSON.stringify(prefs)); } catch {}
   };
 
   const toggleDark = () => {
@@ -5213,7 +5264,7 @@ export default function OracleApp() {
     Object.entries(updated).forEach(([date, pull]) => {
       if (!HISTORICAL_PULLS.find(h => h.date === date) || pull.reflection) u[date] = pull;
     });
-    try { await window.storage.set("oracle_pulls", JSON.stringify(u)); } catch {}
+    try { await storage.set("oracle_pulls", JSON.stringify(u)); } catch {}
   };
 
   const generateReading = async () => {
@@ -5230,7 +5281,7 @@ export default function OracleApp() {
     const tokenBudget = pullStyle === "whisper" ? 150 : pullStyle === "dialogue" ? 350 : 600;
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json"},
+        method:"POST", headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:tokenBudget, messages:[{role:"user",content:prompt}] })
       });
       const data = await res.json();
@@ -5358,7 +5409,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body: JSON.stringify({
           // Use Haiku for early turns, Sonnet once conversation deepens
           model: newMsgs.length <= 4 ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-20250514",
@@ -5404,7 +5455,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
   const saveResonance = async (date, idx) => {
     const updated = { ...resonanceMap, [date]: idx };
     setResonanceMap(updated);
-    try { await window.storage.set("oracle_resonance", JSON.stringify(updated)); } catch {}
+    try { await storage.set("oracle_resonance", JSON.stringify(updated)); } catch {}
   };
 
   const saveReflection = async (date) => {
@@ -5964,86 +6015,135 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
   // Oracle tab now renders OraclePage inline — unified chat interface
   const renderReading = () => {
     if (!todayPull) { setActiveTab("pull"); return null; }
+    const userInitial = (onboardUser?.name || onboardName || "?")[0].toUpperCase();
     return (
-      <div className="pull-form fi">
-        {/* Top bar — back left, dots right */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"28px"}}>
-          <button className="back-btn" style={{margin:0}} onClick={()=>setActiveTab("home")}>← back</button>
-          <button className="dots-menu-btn" onClick={()=>setActiveTab("profile")}><svg width="14" height="14" viewBox="0 0 4 16" fill="currentColor"><circle cx="2" cy="2" r="1.2"/><circle cx="2" cy="8" r="1.2"/><circle cx="2" cy="14" r="1.2"/></svg></button>
-        </div>
+      <div className="fi">
 
-        {/* Card + reading */}
-        <div style={{display:"flex",gap:"20px",alignItems:"flex-start",marginBottom:"28px"}}>
-          <div className="card-skew" style={{transform:`rotate(${cardRotation(todayPull.date,4)}deg)`,flexShrink:0}}>
-            <SmartCard cardStr={todayPull.card} size={72}/>
+        {/* Page header */}
+        <PageHeader
+          title="the oracle"
+          sub="your reading for today."
+          onMenu={()=>setActiveTab("home")}
+        />
+
+        {/* Card + meta context strip */}
+        <div style={{
+          display:"flex", alignItems:"center", gap:"16px",
+          padding:"20px 0 20px", borderBottom:"1px solid var(--rule)",
+          marginBottom:"24px",
+        }}>
+          <div style={{flexShrink:0, transform:`rotate(${cardRotation(todayPull.date,4)}deg)`}}>
+            <SmartCard cardStr={todayPull.card} size={64}/>
           </div>
-          <div>
-            <div style={{fontFamily:"var(--font-mono)",fontSize:"8px",letterSpacing:"0.22em",textTransform:"uppercase",color:"var(--ash)",marginBottom:"6px"}}>
-              {formatDate(todayPull.date)} · {todayPull.deck}
+          <div style={{minWidth:0}}>
+            <div style={{fontFamily:"var(--font-mono)",fontSize:"7px",letterSpacing:"0.22em",
+              textTransform:"uppercase",color:"var(--silver)",marginBottom:"4px"}}>
+              {formatDate(todayPull.date)}
             </div>
-            <CardTitle cardStr={todayPull.card} className="reading-result-card" style={{fontSize:"44px", marginBottom:"6px"}}/>
+            <CardTitle cardStr={todayPull.card} style={{fontSize:"32px"}}/>
             {todayPull.intention && (
-              <div style={{fontFamily:"var(--font-body)",fontSize:"14px",color:"var(--ash)"}}>
+              <div style={{fontFamily:"var(--font-body)",fontSize:"14px",
+                fontStyle:"italic",color:"var(--ash)",marginTop:"3px",
+                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                 "{todayPull.intention}"
               </div>
             )}
           </div>
         </div>
 
+        {/* Reading as the first oracle message */}
         {todayPull.reading && (
-          <div className="reading-result-body" style={{marginBottom:"32px"}}>
-            {todayPull.reading.split("\n\n").map((p,i)=><p key={i}>{p}</p>)}
+          <div className="oracle-msg" style={{marginBottom:"20px"}}>
+            <div className="oracle-msg-avatar">
+              <StarGlyph size={13} color="currentColor"/>
+            </div>
+            <div className="oracle-msg-bubble" style={{whiteSpace:"pre-wrap",fontSize:"16px",lineHeight:1.85}}>
+              {todayPull.reading}
+            </div>
           </div>
         )}
 
-        {/* Inline Oracle chat */}
-        <div style={{borderTop:"1px solid var(--rule)",paddingTop:"24px"}}>
-          <div style={{fontFamily:"var(--font-mono)",fontSize:"8px",letterSpacing:"0.22em",textTransform:"uppercase",color:"var(--ash)",marginBottom:"16px",display:"flex",alignItems:"center",gap:"8px"}}>
-            <SuitIcon suit="diamond" size={10} style={{color:"var(--red-suit)"}}/>
-            Ask the Oracle
-            <SuitIcon suit="diamond" size={10} style={{color:"var(--red-suit)"}}/>
+        {/* Empty state prompt */}
+        {pullOracleMessages.length === 0 && !pullOracleLoading && (
+          <div style={{
+            fontFamily:"var(--font-mono)", fontSize:"7px",
+            letterSpacing:"0.22em", textTransform:"uppercase",
+            color:"var(--silver)", textAlign:"center",
+            padding:"12px 0 20px",
+          }}>
+            ask anything · go deeper · begin
           </div>
+        )}
 
-          {pullOracleMessages.length > 0 && (
-            <div style={{display:"flex",flexDirection:"column",gap:"14px",marginBottom:"16px"}}>
-              {pullOracleMessages.map((msg,i) => (
-                <div key={i} className={`oracle-msg ${msg.role==="user"?"user":""}`}>
-                  <div className="oracle-msg-avatar">
-                    {msg.role==="assistant" ? <StarGlyph size={13} color="currentColor"/> : "B"}
-                  </div>
-                  <div className="oracle-msg-bubble" style={{whiteSpace:"pre-wrap",fontSize:"15px"}}>
-                    {msg.content}
-                  </div>
-                </div>
-              ))}
-              {pullOracleLoading && (
-                <div className="oracle-msg">
-                  <div className="oracle-msg-avatar"><StarGlyph size={13} color="currentColor"/></div>
-                  <div className="oracle-msg-bubble typing">
-                    <div className="oracle-dot"/><div className="oracle-dot"/><div className="oracle-dot"/>
-                  </div>
-                </div>
-              )}
+        {/* Conversation thread */}
+        <div style={{display:"flex",flexDirection:"column",gap:"14px",paddingBottom:"140px"}}>
+          {pullOracleMessages.map((msg,i) => (
+            <div key={i} className={`oracle-msg ${msg.role==="user"?"user":""}`}>
+              <div className="oracle-msg-avatar">
+                {msg.role==="assistant"
+                  ? <StarGlyph size={13} color="currentColor"/>
+                  : <span style={{fontSize:"11px",fontWeight:500}}>{userInitial}</span>
+                }
+              </div>
+              <div className="oracle-msg-bubble" style={{whiteSpace:"pre-wrap",fontSize:"15px",lineHeight:1.75}}>
+                {msg.content}
+              </div>
+            </div>
+          ))}
+
+          {/* Suit blink thinking indicator — replaces dots */}
+          {pullOracleLoading && (
+            <div className="oracle-thinking">
+              <div className="oracle-thinking-suit">
+                <SuitIcon suit="spade"   size={14} style={{color:"var(--ink)"}}/>
+              </div>
+              <div className="oracle-thinking-suit">
+                <SuitIcon suit="diamond" size={14} style={{color:"var(--red-suit)"}}/>
+              </div>
+              <div className="oracle-thinking-suit">
+                <SuitIcon suit="club"    size={14} style={{color:"var(--ink)"}}/>
+              </div>
+              <div className="oracle-thinking-suit">
+                <SuitIcon suit="heart"   size={14} style={{color:"var(--red-suit)"}}/>
+              </div>
             </div>
           )}
 
-          <div className="oracle-input-row" style={{padding:"0",border:"none",background:"transparent"}}>
-            <textarea
-              className="oracle-input"
-              value={pullOracleInput}
-              onChange={e=>setPullOracleInput(e.target.value)}
-              onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendPullOracleMessage();} }}
-              placeholder="What's landing for you? Ask deeper..."
-              rows={1}
-            />
-            <button className="oracle-send"
-              onClick={sendPullOracleMessage}
-              disabled={!pullOracleInput.trim()||pullOracleLoading}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-              </svg>
-            </button>
-          </div>
+          {/* 4 suits always visible below last message when not loading */}
+          {!pullOracleLoading && (pullOracleMessages.length > 0 || todayPull.reading) && (
+            <div style={{
+              display:"flex", gap:"14px", alignItems:"center", justifyContent:"center",
+              padding:"8px 0 0", opacity:0.18,
+            }}>
+              <SuitIcon suit="spade"   size={12} style={{color:"var(--ink)"}}/>
+              <SuitIcon suit="diamond" size={12} style={{color:"var(--red-suit)"}}/>
+              <SuitIcon suit="club"    size={12} style={{color:"var(--ink)"}}/>
+              <SuitIcon suit="heart"   size={12} style={{color:"var(--red-suit)"}}/>
+            </div>
+          )}
+        </div>
+
+        {/* Fixed input bar — sits above bottom nav */}
+        <div className="oracle-input-row">
+          <textarea
+            className="oracle-input"
+            value={pullOracleInput}
+            onChange={e=>setPullOracleInput(e.target.value)}
+            onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendPullOracleMessage();} }}
+            placeholder="Ask the oracle anything…"
+            rows={1}
+            autoFocus
+          />
+          <button className="oracle-send"
+            onClick={sendPullOracleMessage}
+            disabled={!pullOracleInput.trim()||pullOracleLoading}>
+            {/* Spade rotated 90° — points right like an arrow */}
+            <SuitIcon suit="spade" size={16} style={{
+              color:"#fff",
+              transform:"rotate(90deg)",
+              display:"block",
+            }}/>
+          </button>
         </div>
       </div>
     );
@@ -6248,7 +6348,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
           <div className="context-actions">
             {contextEditing ? (
               <>
-                <button className="context-btn primary" onClick={async()=>{try{await window.storage.set("oracle_context",contextProfile);setContextSaved(true);setContextEditing(false);}catch{}}}>Activate →</button>
+                <button className="context-btn primary" onClick={async()=>{try{await storage.set("oracle_context",contextProfile);setContextSaved(true);setContextEditing(false);}catch{}}}>Activate →</button>
                 <button className="context-btn" onClick={()=>setContextProfile(CONTEXT_DRAFT)}>Reset</button>
               </>
             ) : (
@@ -6291,7 +6391,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
       {/* Logout */}
       <div className="settings-section" style={{borderTop:"1px solid var(--rule)",paddingTop:"28px",marginTop:"12px"}}>
         <button className="settings-logout-btn" onClick={async()=>{
-          try { await window.storage.delete("oracle_user"); } catch {}
+          try { await storage.delete("oracle_user"); } catch {}
           setOnboardStep("splash");
           setTimeout(()=>setOnboardStep("welcome"), 2200);
           setActiveTab("home");
@@ -6516,7 +6616,9 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
                 <SuitIcon suit="heart"   size={14} style={{color:"var(--red-suit)"}}/>
               </div>
               <div className="header-title">the offering</div>
-              <div className="offering-page-subhead">your daily draw awaits</div>
+              <div className="offering-page-subhead">
+                {todayPull ? "your draw of the day" : "your daily draw awaits"}
+              </div>
             </div>
           )}
 
@@ -6808,12 +6910,103 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
                   )}
                   </>
                 ) : (
-                  <HeroCard
-                    pull={todayPull}
-                    isNew={isNewPull}
-                    onTap={e=>openEntry(e,todayPull,160)}
-                    onOracle={()=>{ setOracleDateKey(todayPull.date); setOracleOpen(true); }}
-                  />
+                  /* ── Post-pull: same offering layout, card revealed, reading below ── */
+                  (() => {
+                    const d = new Date(todayPull.date+"T12:00:00");
+                    const dayNum = d.getDate();
+                    const padded = String(dayNum).padStart(2,"0");
+                    const monthName = ["January","February","March","April","May","June",
+                      "July","August","September","October","November","December"][d.getMonth()];
+                    const dayName = ["Sunday","Monday","Tuesday","Wednesday",
+                      "Thursday","Friday","Saturday"][d.getDay()];
+                    return (
+                      <div className="offering-screen">
+
+                        {/* Date stage */}
+                        <div className="offering-date-stage">
+                          <div className="offering-date-bg" style={{fontSize:"clamp(240px,68vw,340px)"}}>
+                            <span>{padded[0]}</span><span>{padded[1]}</span>
+                          </div>
+                          <div className="offering-date-editorial">
+                            <div className="offering-date-top">
+                              <span className="offering-date-num">{dayNum}</span>
+                              <span className="offering-date-slash">/</span>
+                              <span className="offering-date-month">{monthName}</span>
+                            </div>
+                            <span className="offering-date-day">{dayName}</span>
+                          </div>
+                        </div>
+
+                        {/* Revealed card — floats with same animation */}
+                        <div className="offering-card-wrap"
+                          onClick={()=>setActiveTab("reading")}
+                          style={{cursor:"pointer"}}>
+                          <SmartCard
+                            cardStr={todayPull.card}
+                            size={Math.min(260, Math.round(window.innerWidth * 0.58))}
+                          />
+                        </div>
+
+                        {/* Intention — shown if present */}
+                        {todayPull.intention && (
+                          <div className="offering-intention" style={{marginBottom:"20px"}}>
+                            <label className="offering-intention-label">Intention</label>
+                            <div style={{
+                              fontFamily:"var(--font-body)", fontSize:"16px",
+                              fontStyle:"italic", fontWeight:300, color:"var(--ash)",
+                              lineHeight:1.8, padding:"14px 18px",
+                              border:"1px solid var(--rule)", borderRadius:"var(--card-radius)",
+                              background:"var(--paper-dark)", boxShadow:"var(--inner-inset)",
+                            }}>
+                              "{todayPull.intention}"
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Reading box */}
+                        {todayPull.reading && (
+                          <div className="offering-intention" style={{marginBottom:"0"}}>
+                            <label className="offering-intention-label">the oracle's reading</label>
+                            <div style={{
+                              fontFamily:"var(--font-body)", fontSize:"17px",
+                              fontWeight:300, color:"var(--ink)",
+                              lineHeight:1.85, padding:"18px 20px",
+                              border:"1px solid var(--rule)", borderRadius:"var(--card-radius)",
+                              background:"var(--paper-dark)", boxShadow:"var(--inner-inset)",
+                            }}>
+                              {todayPull.reading.split("\n\n").map((p,i)=>(
+                                <p key={i} style={{marginBottom: i < todayPull.reading.split("\n\n").length-1 ? "14px" : 0}}>{p}</p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* WeekBar */}
+                        <WeekBar
+                          pulls={pulls}
+                          today={today}
+                          contextProfile={contextProfile}
+                          onDayTap={(pull) => { setReflectionDraft(pull.reflection||""); setSelectedEntry(pull); }}
+                          onPullTap={() => setActiveTab("pull")}
+                          onNavigateToObservatory={() => setActiveTab("archive")}
+                        />
+
+                      </div>
+                    );
+                  })()
+                )}
+
+                {/* Sticky CTA — changes based on pull state */}
+                {todayPull && (
+                  <div className="offering-sticky-cta">
+                    <button className="offering-cta" onClick={()=>setActiveTab("reading")}>
+                      <SuitIcon suit="spade"   size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                      <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                      consult the oracle
+                      <SuitIcon suit="club"    size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                      <SuitIcon suit="heart"   size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+                    </button>
+                  </div>
                 )}
 
                 {/* Recent pulls feed */}
