@@ -6682,6 +6682,13 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
         font-family: 'Cormorant Garamond', Georgia, serif;
         font-style: italic; font-size: 15px; color: var(--ash); line-height: 1.7;
       }
+      /* ── Full-width pages: snap fixed overlays to center column ── */
+      .oracle-page { left: 25vw; right: 25vw; max-width: none; margin: 0; }
+      .oracle-input-row { left: 25vw; right: 25vw; max-width: none; margin: 0; bottom: 0; }
+      .reading-input-row { left: 25vw; right: 25vw; }
+      .reading-save-btn { left: 25vw; right: 25vw; }
+      .offering-sticky-cta { left: 25vw; right: 25vw; max-width: none; margin: 0; bottom: 0; }
+      .pull-form { max-width: 100%; }
     }
     @media (max-width: 1023px) {
       .desktop-sidebar { display: none !important; }
