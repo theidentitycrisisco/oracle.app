@@ -6647,7 +6647,20 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
         background: var(--paper);
         transition: background 0.3s;
       }
-      .desktop-center .app { max-width: 100%; padding-bottom: 60px; }
+      .desktop-center .app {
+        max-width: none !important;
+        width: 100%;
+        margin: 0;
+        padding-left: 48px;
+        padding-right: 48px;
+        padding-bottom: 60px;
+        box-sizing: border-box;
+      }
+      /* Remove double side-padding from pages that add their own */
+      .desktop-center .settings-page { padding-left: 0; padding-right: 0; }
+      /* Offering/home page — stretch children to fill column, center card within */
+      .desktop-center .offering-screen { align-items: stretch; }
+      .desktop-center .offering-card-wrap { display: flex; justify-content: center; }
       .desktop-oracle-panel {
         position: fixed; top: 0; right: 0; bottom: 0; width: 25vw;
         border-left: 1px solid var(--rule);
