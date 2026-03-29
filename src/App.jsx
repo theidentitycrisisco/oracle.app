@@ -6580,7 +6580,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
     @media (min-width: 1024px) {
       .bottom-nav { display: none !important; }
       .desktop-sidebar {
-        position: fixed; top: 0; left: 0; bottom: 0; width: 220px;
+        position: fixed; top: 0; left: 0; bottom: 0; width: 25vw;
         border-right: 1px solid var(--rule);
         background: var(--paper);
         display: flex; flex-direction: column;
@@ -6641,13 +6641,15 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
       }
       .desktop-nav-settings:hover { color: var(--ink); }
       .desktop-center {
-        margin-left: 220px;
-        margin-right: 360px;
+        margin-left: 25vw;
+        margin-right: 25vw;
         min-height: 100vh;
+        background: var(--paper);
+        transition: background 0.3s;
       }
-      .desktop-center .app { max-width: 680px; padding-bottom: 60px; }
+      .desktop-center .app { max-width: 100%; padding-bottom: 60px; }
       .desktop-oracle-panel {
-        position: fixed; top: 0; right: 0; bottom: 0; width: 360px;
+        position: fixed; top: 0; right: 0; bottom: 0; width: 25vw;
         border-left: 1px solid var(--rule);
         background: var(--paper);
         display: flex; flex-direction: column;
