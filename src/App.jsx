@@ -41,8 +41,8 @@ const GLOBAL_CSS = `
     --ink: #0a0a0a;
     --paper: #f5f2ed;
     --paper-dark: #ede9e2;
-    --ash: #8a8480;
-    --silver: #c8c4be;
+    --ash: #6a6664;
+    --silver: #6e6a68;
     --rule: rgba(10,10,10,0.11);
     --red-suit: #b83232;
     --card-bg: #fdfaf5;
@@ -60,8 +60,8 @@ const GLOBAL_CSS = `
     --ink: #f0ece4;
     --paper: #0a0908;
     --paper-dark: #111009;
-    --ash: #7a7570;
-    --silver: #504c48;
+    --ash: #8c8884;
+    --silver: #888480;
     --rule: rgba(240,236,228,0.09);
     --red-suit: #c94040;
     --card-bg: #181512;
