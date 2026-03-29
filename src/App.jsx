@@ -6647,18 +6647,12 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
         background: var(--paper);
         transition: background 0.3s;
       }
-      .desktop-center .app {
-        max-width: none !important;
-        width: 100%;
-        margin: 0;
-        padding-left: 48px;
-        padding-right: 48px;
-        padding-bottom: 60px;
-        box-sizing: border-box;
-      }
-      /* Remove double side-padding from pages that add their own */
-      .desktop-center .settings-page { padding-left: 0; padding-right: 0; }
-      /* Offering/home page — stretch children to fill column, center card within */
+      /* Center column content — fill full 50vw width, keep 24px gutters from global */
+      .desktop-center .app { max-width: 100%; margin: 0; padding-bottom: 60px; }
+      /* Pages that add their own 24px side padding — remove it (app gutters are enough) */
+      .desktop-center .settings-page,
+      .desktop-center .origin-page { padding-left: 0; padding-right: 0; }
+      /* Offering/home — stretch children to fill column width, center card within it */
       .desktop-center .offering-screen { align-items: stretch; }
       .desktop-center .offering-card-wrap { display: flex; justify-content: center; }
       .desktop-oracle-panel {
