@@ -6568,10 +6568,131 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
     if (updates.email) setOnboardUser(u => ({...u, email: updates.email}));
   };
 
+  // Desktop detection
+  const [isDesktop, setIsDesktop] = React.useState(() => window.innerWidth >= 1024);
+  useEffect(() => {
+    const handler = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+
+  const DESKTOP_CSS = `
+    @media (min-width: 1024px) {
+      .bottom-nav { display: none !important; }
+      .desktop-sidebar {
+        position: fixed; top: 0; left: 0; bottom: 0; width: 220px;
+        border-right: 1px solid var(--rule);
+        background: var(--paper);
+        display: flex; flex-direction: column;
+        padding: 40px 0 32px;
+        z-index: 50;
+        transition: background 0.3s;
+      }
+      .desktop-sidebar-logo {
+        padding: 0 28px 32px;
+        font-family: 'Cormorant Unicase', Georgia, serif;
+        font-size: 22px; font-weight: 300; letter-spacing: 0.04em;
+        text-transform: lowercase; color: var(--ink);
+        border-bottom: 1px solid var(--rule);
+        margin-bottom: 20px;
+        display: flex; align-items: center; gap: 10px;
+      }
+      .desktop-nav-item {
+        display: flex; align-items: center; gap: 14px;
+        padding: 13px 28px;
+        font-family: 'Montserrat', sans-serif; font-size: 8px;
+        letter-spacing: 0.22em; text-transform: uppercase;
+        color: var(--silver); cursor: pointer;
+        border: none; background: none; width: 100%; text-align: left;
+        transition: color 0.15s, background 0.15s;
+        position: relative;
+      }
+      .desktop-nav-item:hover { color: var(--ink); background: var(--paper-dark); }
+      .desktop-nav-item.active { color: var(--ink); }
+      .desktop-nav-item.active::before {
+        content: ''; position: absolute; left: 0; top: 20%; bottom: 20%;
+        width: 2px; background: var(--ink);
+      }
+      .desktop-nav-pull {
+        margin: 16px 28px 0;
+        padding: 14px 20px;
+        background: var(--red-suit); color: #fff;
+        border: none; border-radius: 4px;
+        font-family: 'Montserrat', sans-serif; font-size: 8px;
+        letter-spacing: 0.22em; text-transform: uppercase;
+        cursor: pointer; transition: opacity 0.15s;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        box-shadow: 0 2px 12px rgba(139,18,18,0.28);
+      }
+      .desktop-nav-pull:hover { opacity: 0.85; }
+      .desktop-nav-pull.has-pull {
+        background: transparent; color: var(--ink);
+        border: 1px solid var(--rule); box-shadow: none;
+      }
+      .desktop-nav-pull.has-pull:hover { background: var(--paper-dark); }
+      .desktop-nav-spacer { flex: 1; }
+      .desktop-nav-settings {
+        padding: 13px 28px;
+        font-family: 'Montserrat', sans-serif; font-size: 7px;
+        letter-spacing: 0.22em; text-transform: uppercase;
+        color: var(--silver); cursor: pointer;
+        border: none; background: none; width: 100%; text-align: left;
+        transition: color 0.15s; display: flex; align-items: center; gap: 12px;
+      }
+      .desktop-nav-settings:hover { color: var(--ink); }
+      .desktop-center {
+        margin-left: 220px;
+        margin-right: 360px;
+        min-height: 100vh;
+      }
+      .desktop-center .app { max-width: 680px; padding-bottom: 60px; }
+      .desktop-oracle-panel {
+        position: fixed; top: 0; right: 0; bottom: 0; width: 360px;
+        border-left: 1px solid var(--rule);
+        background: var(--paper);
+        display: flex; flex-direction: column;
+        z-index: 50; transition: background 0.3s;
+        overflow: hidden;
+      }
+      .desktop-oracle-header {
+        padding: 28px 24px 20px;
+        border-bottom: 1px solid var(--rule);
+        display: flex; align-items: center; justify-content: space-between;
+        flex-shrink: 0;
+      }
+      .desktop-oracle-title {
+        font-family: 'Cormorant Unicase', Georgia, serif;
+        font-size: 22px; font-weight: 300; letter-spacing: 0.03em;
+        text-transform: lowercase; color: var(--ink);
+        display: flex; align-items: center; gap: 8px;
+      }
+      .desktop-oracle-body { flex: 1; overflow-y: auto; }
+      .desktop-oracle-nopull {
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; height: 100%;
+        padding: 40px 32px; text-align: center; gap: 16px;
+      }
+      .desktop-oracle-nopull-label {
+        font-family: 'Montserrat', sans-serif; font-size: 8px;
+        letter-spacing: 0.22em; text-transform: uppercase; color: var(--silver);
+      }
+      .desktop-oracle-nopull-text {
+        font-family: 'Cormorant Garamond', Georgia, serif;
+        font-style: italic; font-size: 15px; color: var(--ash); line-height: 1.7;
+      }
+    }
+    @media (max-width: 1023px) {
+      .desktop-sidebar { display: none !important; }
+      .desktop-oracle-panel { display: none !important; }
+      .desktop-center { margin: 0 !important; }
+    }
+  `;
+
   return (
     <DarkContext.Provider value={darkMode}>
     <>
       <style>{GLOBAL_CSS}</style>
+      <style>{DESKTOP_CSS}</style>
       {/* Onboarding overlay — shown until onboardStep === "app" */}
       {onboardStep !== "app" && (
         <Onboarding
@@ -6583,6 +6704,88 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
       )}
       <div className="grain-overlay" aria-hidden="true"/>
       <div className={darkMode ? "dark" : ""} style={{minHeight:"100vh",background:"var(--paper)",transition:"background 0.3s"}}>
+
+        {/* ── Desktop left sidebar nav ── */}
+        {isDesktop && (
+          <aside className="desktop-sidebar">
+            <div className="desktop-sidebar-logo">
+              <SuitIcon suit="spade" size={14} style={{opacity:0.4}}/>
+              oracle
+            </div>
+            <button className={`desktop-nav-item ${activeTab==="home"?"active":""}`} onClick={()=>setActiveTab("home")}>
+              <SuitIcon suit="spade" size={14}/>
+              Offering
+            </button>
+            <button className={`desktop-nav-item ${activeTab==="veil"?"active":""}`} onClick={()=>setActiveTab("veil")}>
+              <SuitIcon suit="diamond" size={14} style={{color: activeTab==="veil" ? "var(--red-suit)" : "currentColor"}}/>
+              Oblivion
+            </button>
+            <button className={`desktop-nav-item ${activeTab==="archive"?"active":""}`} onClick={()=>setActiveTab("archive")}>
+              <SuitIcon suit="club" size={14}/>
+              Observatory
+            </button>
+            <button className={`desktop-nav-item ${activeTab==="profile"?"active":""}`} onClick={()=>setActiveTab("profile")}>
+              <SuitIcon suit="heart" size={14} style={{color: activeTab==="profile" ? "var(--red-suit)" : "currentColor"}}/>
+              Origin
+            </button>
+            <div style={{margin:"20px 28px 4px", borderTop:"1px solid var(--rule)"}}/>
+            <button
+              className={`desktop-nav-pull ${todayPull ? "has-pull" : ""}`}
+              onClick={()=>{
+                if (todayPull) {
+                  setActiveTab("reading");
+                } else {
+                  setPullDeck(defaultDeck); setPullStyle(defaultStyle);
+                  setPullMode("manual"); setRandomCard(null);
+                  setShowReveal(false); setPullCard("");
+                  setActiveTab("pull");
+                }
+              }}>
+              {todayPull ? (
+                <><SuitIcon suit="spade" size={10}/> today's reading</>
+              ) : (
+                <><SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.7)"}}/> pull a card <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,255,255,0.7)"}}/></>
+              )}
+            </button>
+            <div className="desktop-nav-spacer"/>
+            <button className="desktop-nav-settings" onClick={()=>setActiveTab("settings")}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+              Settings
+            </button>
+          </aside>
+        )}
+
+        {/* ── Desktop right Oracle panel ── */}
+        {isDesktop && (
+          <aside className="desktop-oracle-panel">
+            <div className="desktop-oracle-header">
+              <div className="desktop-oracle-title">
+                <SuitIcon suit="diamond" size={13} style={{color:"var(--red-suit)"}}/>
+                oracle
+              </div>
+              <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:"7px",letterSpacing:"0.18em",textTransform:"uppercase",color:"var(--silver)"}}>
+                always listening
+              </div>
+            </div>
+            <div className="desktop-oracle-body">
+              {todayPull ? renderOracle() : (
+                <div className="desktop-oracle-nopull">
+                  <div style={{opacity:0.2, marginBottom:"8px"}}>
+                    <SuitIcon suit="diamond" size={32} style={{color:"var(--red-suit)"}}/>
+                  </div>
+                  <div className="desktop-oracle-nopull-label">no card yet today</div>
+                  <div className="desktop-oracle-nopull-text">
+                    Pull today's card to open your conversation with the oracle.
+                  </div>
+                </div>
+              )}
+            </div>
+          </aside>
+        )}
+
+        <div className={isDesktop ? "desktop-center" : ""}>
         <div className="app">
 
           {/* Header, hidden on pull + home + oracle + reading + archive tabs */}
@@ -7233,7 +7436,10 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
           );
         })()}
 
-        {/* Bottom Nav */}
+        </div>{/* end .app */}
+        </div>{/* end .desktop-center */}
+
+        {/* Bottom Nav — mobile only */}
         <nav className="bottom-nav">
           {/* ♠ Today */}
           <button className={`bnav-item ${activeTab==="home"?"active":""}`} onClick={()=>setActiveTab("home")}>
