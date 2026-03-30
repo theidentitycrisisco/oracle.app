@@ -8,6 +8,28 @@ import {
   supabaseSignOut,
 } from "./supabase.js";
 
+// ── Claude API helper ───────────────────────────────────────────────────────
+// Routes all Anthropic calls through /api/claude (server-side key, rate limiting)
+async function callClaude(anthropicBody, callType = "chat") {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers = { "Content-Type": "application/json" };
+  if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+
+  const res = await fetch("/api/claude", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ anthropicBody, callType }),
+  });
+
+  if (res.status === 429) {
+    const info = await res.json();
+    window.dispatchEvent(new CustomEvent("oracle-rate-limit", { detail: info }));
+    throw Object.assign(new Error("rate_limit"), { info });
+  }
+  if (!res.ok) throw new Error(`claude_error_${res.status}`);
+  return res.json();
+}
+
 // localStorage shim — matches the window.storage API shape used throughout
 // (window.storage only exists inside Claude artifacts; this makes the app work in real browsers)
 const storage = {
@@ -2688,6 +2710,81 @@ function SuitsFlash({ onDone }) {
 
 // ── AppSuitsBar ─────────────────────────────────────────────────────────────
 // Persistent suit icons that live above page content — never unmounts
+// ── PaywallModal ─────────────────────────────────────────────────────────────
+function PaywallModal({ info, onClose }) {
+  const isReading = info?.callType === "reading";
+  const used  = info?.used  ?? 0;
+  const limit = info?.limit ?? 10;
+  return (
+    <div style={{
+      position:"fixed", inset:0, zIndex:99999,
+      background:"rgba(2,1,1,0.92)", backdropFilter:"blur(8px)",
+      display:"flex", alignItems:"center", justifyContent:"center",
+      padding:"24px",
+    }}>
+      <div style={{
+        background:"#0e0b0a", border:"1px solid rgba(240,236,228,0.1)",
+        borderRadius:"4px", padding:"40px 32px 32px",
+        maxWidth:"360px", width:"100%", textAlign:"center",
+      }}>
+        {/* Suits */}
+        <div style={{display:"flex",gap:"20px",justifyContent:"center",marginBottom:"28px"}}>
+          {[
+            {suit:"spade",red:false},{suit:"diamond",red:true},
+            {suit:"club",red:false},{suit:"heart",red:true},
+          ].map(({suit,red})=>(
+            <div key={suit} style={{color:red?"#c94040":"rgba(240,236,228,0.9)"}}>
+              <SuitIcon suit={suit} size={18}/>
+            </div>
+          ))}
+        </div>
+
+        {/* Heading */}
+        <div style={{
+          fontFamily:"var(--font-display)", fontSize:"26px", fontWeight:400,
+          color:"rgba(240,236,228,0.95)", letterSpacing:"0.02em",
+          textTransform:"lowercase", lineHeight:0.95, marginBottom:"16px",
+        }}>
+          {isReading ? "your free readings\nare spent." : "you've reached\nyour limit."}
+        </div>
+
+        {/* Sub */}
+        <div style={{
+          fontFamily:"'Montserrat',sans-serif", fontSize:"10px",
+          letterSpacing:"0.18em", textTransform:"uppercase",
+          color:"rgba(240,236,228,0.45)", lineHeight:1.8, marginBottom:"32px",
+        }}>
+          {used} of {limit} {isReading ? "readings" : "messages"} used this month.<br/>
+          Upgrade to Oracle Pro for unlimited access.
+        </div>
+
+        {/* Upgrade CTA — Stripe wired here later */}
+        <button style={{
+          width:"100%", padding:"14px",
+          background:"#c94040", border:"none", borderRadius:"3px",
+          fontFamily:"'Montserrat',sans-serif", fontSize:"9px",
+          letterSpacing:"0.24em", textTransform:"uppercase",
+          color:"#fff", cursor:"pointer", marginBottom:"12px",
+        }}
+          onClick={()=>{/* Stripe checkout goes here */}}
+        >
+          ♦ upgrade to pro ♦
+        </button>
+
+        {/* Dismiss */}
+        <button style={{
+          background:"none", border:"none",
+          fontFamily:"'Montserrat',sans-serif", fontSize:"8px",
+          letterSpacing:"0.2em", textTransform:"uppercase",
+          color:"rgba(240,236,228,0.35)", cursor:"pointer", padding:"8px",
+        }} onClick={onClose}>
+          dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AppSuitsBar({ cycling }) {
   const [activeSuit, setActiveSuit] = React.useState(0);
   const intervalRef = React.useRef(null);
@@ -4208,17 +4305,12 @@ function WeekBar({ pulls, today, contextProfile, onDayTap, onPullTap, onNavigate
 
     (async () => {
       try {
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-          body: JSON.stringify({
+        const data = await callClaude({
             model: "claude-haiku-4-5-20251001",
             max_tokens: 40,
             system: "Write a 1-2 line poem about someone's emotional week. Second person, dark, sardonic. No card names. No titles. Poem only.",
             messages: [{ role: "user", content: prompt }]
-          })
-        });
-        const data = await res.json();
+          }, "poem");
         const text = data.content?.find(b => b.type === "text")?.text || "";
         logSpend("week-poem", "claude-haiku-4-5-20251001", data.usage?.input_tokens||180, data.usage?.output_tokens||20);
         setSummary(text);
@@ -4515,18 +4607,12 @@ ${pull?.intention ? `Intention: ${pull.intention}` : ""}
 ${pull?.reflection ? `Reflection: ${pull.reflection}` : ""}`;
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-        body: JSON.stringify({
-          // Haiku for cost efficiency — trim history to last 8 messages
+      const data = await callClaude({
           model: "claude-haiku-4-5-20251001",
           max_tokens: 400,
           system: systemPrompt,
           messages: history.slice(-8)
-        })
-      });
-      const data = await res.json();
+        }, "chat");
       logSpend("oracle-page-chat", "claude-haiku-4-5-20251001", data.usage?.input_tokens||800, data.usage?.output_tokens||200);
       const reply = data.content?.find(b => b.type === "text")?.text || "";
       const replyMsg = { type: "msg", dateKey, role: "assistant", content: reply };
@@ -5383,6 +5469,8 @@ export default function OracleApp() {
   const [pullSaved, setPullSaved] = useState(false);
   const [suitsState, setSuitsState] = useState("idle"); // "idle" | "cycling"
   const [supabaseUser, setSupabaseUser] = useState(null); // authenticated Supabase user
+  const [paywallVisible, setPaywallVisible] = useState(false);
+  const [paywallInfo, setPaywallInfo] = useState(null);
 
   // Cycle suit icons on every tab change
   useEffect(() => {
@@ -5390,6 +5478,13 @@ export default function OracleApp() {
     const t = setTimeout(() => setSuitsState("idle"), 500);
     return () => clearTimeout(t);
   }, [activeTab]);
+
+  // ── Rate limit event listener ─────────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e) => { setPaywallInfo(e.detail); setPaywallVisible(true); };
+    window.addEventListener("oracle-rate-limit", handler);
+    return () => window.removeEventListener("oracle-rate-limit", handler);
+  }, []);
 
   // ── Supabase auth listener ──────────────────────────────────────────────────
   useEffect(() => {
@@ -5506,11 +5601,10 @@ export default function OracleApp() {
     // Token budget by style — whisper needs far fewer tokens than immersion
     const tokenBudget = pullStyle === "whisper" ? 150 : pullStyle === "dialogue" ? 350 : 600;
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:tokenBudget, messages:[{role:"user",content:prompt}] })
-      });
-      const data = await res.json();
+      const data = await callClaude(
+        { model:"claude-sonnet-4-20250514", max_tokens:tokenBudget, messages:[{role:"user",content:prompt}] },
+        "reading"
+      );
       logSpend("generate-reading", "claude-sonnet-4-20250514", data.usage?.input_tokens||600, data.usage?.output_tokens||350);
       setPullReading(data.content?.filter(b=>b.type==="text").map(b=>b.text).join("") || "The cards are quiet today.");
     } catch { setPullReading("The veil is thick today. Try again shortly."); }
@@ -5633,19 +5727,12 @@ Reading given: ${sourceReading}
 
 Continue the conversation. Be direct, grounded, poetic when the card demands it. No flattery.`;
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST",
-        headers:{"Content-Type":"application/json","x-api-key":import.meta.env.VITE_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body: JSON.stringify({
-          // Use Haiku for early turns, Sonnet once conversation deepens
+      const data = await callClaude({
           model: newMsgs.length <= 4 ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-20250514",
           max_tokens: 300,
           system,
-          // Trim to last 6 messages to prevent unbounded cost
           messages: newMsgs.slice(-6).map(m=>({role:m.role,content:m.content}))
-        })
-      });
-      const data = await res.json();
+        }, "chat");
       const usedModel = newMsgs.length <= 4 ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-20250514";
       logSpend("reading-chat", usedModel, data.usage?.input_tokens||500, data.usage?.output_tokens||180);
       const reply = data.content?.find(b=>b.type==="text")?.text || "";
@@ -6945,6 +7032,9 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
           onUpdate={handleOnboardUpdate}
           user={onboardUser}
         />
+      )}
+      {paywallVisible && (
+        <PaywallModal info={paywallInfo} onClose={()=>setPaywallVisible(false)}/>
       )}
       <div className="grain-overlay" aria-hidden="true"/>
       <div className={darkMode ? "dark" : ""} style={{minHeight:"100vh",background:"var(--paper)",transition:"background 0.3s"}}>
