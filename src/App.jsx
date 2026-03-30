@@ -1957,6 +1957,7 @@ const GLOBAL_CSS = `
     font-family: var(--font-display);
     font-weight: 300; line-height: 0.92;
     letter-spacing: -0.04em;
+    text-transform: lowercase;
     color: rgba(10,10,10,0.048);
     user-select: none; pointer-events: none;
     white-space: nowrap;
@@ -1985,16 +1986,18 @@ const GLOBAL_CSS = `
     font-family: var(--font-display);
     font-size: 15px; font-weight: 400;
     letter-spacing: 0.08em; color: var(--ink);
+    text-transform: lowercase;
   }
   .offering-date-slash {
     font-family: var(--font-display);
     font-size: 15px; font-weight: 300;
     color: var(--silver);
+    text-transform: lowercase;
   }
   .offering-date-month {
     font-family: var(--font-display);
     font-size: 15px; font-weight: 400;
-    letter-spacing: 0.18em; text-transform: uppercase;
+    letter-spacing: 0.18em; text-transform: lowercase;
     color: var(--ink);
   }
   .offering-date-day {
@@ -3172,14 +3175,14 @@ function SolitaireGame({ dark }) {
         {/* Tagline — Cormorant Unicase, no italic, readable */}
         <div style={{
           fontFamily:"var(--font-display)", fontSize:"15px",
-          fontWeight:400, letterSpacing:"0.06em", textTransform:"uppercase",
+          fontWeight:400, letterSpacing:"0.06em", textTransform:"lowercase",
           color:"var(--ash)", lineHeight:1.6, marginTop:"2px",
         }}>
           See Beyond The Oblivion Soon
         </div>
         <div style={{
           fontFamily:"var(--font-display)", fontSize:"15px",
-          fontWeight:400, letterSpacing:"0.06em", textTransform:"uppercase",
+          fontWeight:400, letterSpacing:"0.06em", textTransform:"lowercase",
           color:"var(--ink)", lineHeight:1,
           display:"inline-flex", alignItems:"center", gap:"8px",
         }}>
@@ -4533,6 +4536,7 @@ const ONBOARD_CSS = `
     display:flex; flex-direction:column;
     align-items:center; justify-content:center;
     font-family:'Cormorant Unicase','Georgia',serif;
+    text-transform:lowercase;
     overflow:hidden;
   }
   .ob-screen {
@@ -4667,7 +4671,7 @@ const ONBOARD_CSS = `
     border-radius:4px; padding:16px 20px;
     font-family:'Cormorant Unicase',serif; font-size:18px;
     font-weight:300; color:#f0ece4; outline:none;
-    text-align:center; letter-spacing:0.04em;
+    text-align:center; letter-spacing:0.04em; text-transform:lowercase;
     transition:border-color 0.2s;
     margin-bottom:16px;
     caret-color:rgba(224,64,64,0.8);
