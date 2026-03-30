@@ -2663,6 +2663,7 @@ const FLASH_SUITS = [
 ];
 function SuitsFlash({ onDone }) {
   const [activeSuit, setActiveSuit] = React.useState(0);
+  const [phase, setPhase] = React.useState("cycling"); // cycling | rising
   const cycles = React.useRef(0);
   const timerRef = React.useRef(null);
 
@@ -2672,35 +2673,44 @@ function SuitsFlash({ onDone }) {
         const next = (prev + 1) % 4;
         if (next === 0) {
           cycles.current += 1;
-          if (cycles.current >= 3) {
+          if (cycles.current >= 2) {
             clearInterval(timerRef.current);
-            setTimeout(onDone, 300);
+            setTimeout(() => setPhase("rising"), 480);
           }
         }
         return next;
       });
-    }, 280);
+    }, 340);
     return () => clearInterval(timerRef.current);
   }, []); // eslint-disable-line
+
+  React.useEffect(() => {
+    if (phase === "rising") setTimeout(onDone, 1100);
+  }, [phase]); // eslint-disable-line
 
   return (
     <div style={{
       display:"flex", gap:"32px", alignItems:"center", justifyContent:"center",
       padding:"8px 0",
+      transform: phase === "rising" ? "translateY(-44vh) scale(0.7)" : "scale(1)",
+      opacity: phase === "rising" ? 0 : 1,
+      transition: phase === "rising"
+        ? "transform 1s cubic-bezier(0.4,0,0.2,1), opacity 0.8s ease 0.2s"
+        : "none",
     }}>
       {FLASH_SUITS.map(({ suit, red }, i) => {
         const isActive = i === activeSuit;
-        const litColor  = red ? "#c94040" : "rgba(240,236,228,0.95)";
-        const dimColor  = red ? "rgba(201,64,64,0.12)" : "rgba(240,236,228,0.1)";
+        const litColor = red ? "#c94040" : "#d4cfc7";
+        const dimColor = red ? "#2a1212" : "#1c1a18";
         return (
           <div key={suit} style={{
             color: isActive ? litColor : dimColor,
-            transition: "color 0.18s ease, filter 0.18s ease",
+            transition: "color 0.22s ease, filter 0.22s ease",
             filter: isActive
-              ? `drop-shadow(0 0 10px ${red ? "rgba(201,64,64,0.55)" : "rgba(240,236,228,0.3)"})`
+              ? `drop-shadow(0 0 14px ${red ? "rgba(201,64,64,0.5)" : "rgba(212,207,199,0.25)"})`
               : "none",
           }}>
-            <SuitIcon suit={suit} size={30}/>
+            <SuitIcon suit={suit} size={32}/>
           </div>
         );
       })}
@@ -4732,20 +4742,47 @@ const ONBOARD_CSS = `
     text-transform:lowercase;
     overflow:hidden;
   }
+  /* Persistent top bar — lives outside ob-screen, never animates */
+  .ob-topbar {
+    position:absolute; top:0; left:0; right:0;
+    padding:24px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+    z-index:3;
+  }
+  /* Giant ghost step numeral — absolutely centered, behind everything */
+  .ob-step-num {
+    position:absolute;
+    font-family:'Cormorant Unicase',Georgia,serif;
+    font-size:clamp(200px,46vw,300px);
+    font-weight:300; line-height:0.85;
+    letter-spacing:-0.04em;
+    color:#151312;
+    top:50%; left:50%;
+    transform:translate(-50%,-48%);
+    user-select:none; pointer-events:none;
+    z-index:0; text-transform:lowercase;
+    animation:obNumIn 0.9s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  @keyframes obNumIn {
+    from { opacity:0; transform:translate(-50%,-52%) scale(0.94); }
+    to   { opacity:1; transform:translate(-50%,-48%) scale(1); }
+  }
+  /* Animated page content */
   .ob-screen {
+    position:relative; z-index:1;
     width:100%; max-width:400px; padding:0 28px;
     display:flex; flex-direction:column; align-items:center;
-    animation:obIn 0.55s cubic-bezier(0.34,1.2,0.64,1) both;
+    animation:obIn 0.7s cubic-bezier(0.34,1.1,0.64,1) both;
   }
   @keyframes obIn {
-    from { opacity:0; transform:translateY(28px); }
+    from { opacity:0; transform:translateY(32px); }
     to   { opacity:1; transform:none; }
   }
   .ob-exit {
-    animation:obOut 0.38s ease forwards;
+    animation:obOut 0.5s cubic-bezier(0.4,0,1,1) forwards;
   }
   @keyframes obOut {
-    to { opacity:0; transform:translateY(-20px); }
+    to { opacity:0; transform:translateY(-28px); }
   }
   .ob-mark {
     animation:obMarkIn 1.4s cubic-bezier(0.34,1.2,0.64,1) both,
@@ -4904,31 +4941,84 @@ const ONBOARD_CSS = `
     transition:all 0.2s;
   }
   .ob-btn-ghost:hover { border-color:rgba(240,236,228,0.22); color:rgba(240,236,228,0.6); }
+  /* Deck selection — portrait playing-card layout */
   .ob-deck-options {
     display:grid; grid-template-columns:1fr 1fr;
-    gap:10px; width:100%; margin-bottom:28px;
+    gap:12px; width:100%; margin-bottom:24px;
   }
   .ob-deck-btn {
-    padding:20px 16px; border-radius:4px; cursor:pointer;
+    aspect-ratio:2/3; border-radius:6px; cursor:pointer;
     border:1px solid rgba(240,236,228,0.12);
     background:rgba(240,236,228,0.04);
-    display:flex; flex-direction:column; align-items:center; gap:8px;
-    transition:all 0.2s; color:#f0ece4;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:space-between;
+    padding:12px;
+    transition:all 0.3s; color:#f0ece4;
   }
   .ob-deck-btn.selected {
-    border-color:rgba(224,64,64,0.6);
-    background:rgba(224,64,64,0.08);
+    border-color:#c94040;
+    background:rgba(201,64,64,0.1);
   }
-  .ob-deck-icon { font-size:22px; letter-spacing:0.1em; }
+  .ob-deck-btn.dimmed { opacity:0.32; cursor:default; }
+  .ob-deck-corner {
+    width:100%; display:flex; gap:4px; align-items:center;
+  }
+  .ob-deck-corner.bottom {
+    justify-content:flex-end; transform:rotate(180deg);
+  }
+  .ob-deck-center {
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .ob-deck-suits-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:6px;
+    justify-items:center;
+  }
   .ob-deck-label {
-    font-family:'Montserrat',sans-serif; font-size:7px;
-    letter-spacing:0.2em; text-transform:uppercase;
-    opacity:0.7;
+    font-family:'Montserrat',sans-serif; font-size:6px;
+    letter-spacing:0.22em; text-transform:uppercase;
+    color:rgba(240,236,228,0.6); text-align:center;
   }
   .ob-deck-desc {
+    font-family:'Montserrat',sans-serif; font-size:5px;
+    letter-spacing:0.12em; text-transform:uppercase;
+    color:rgba(240,236,228,0.28); text-align:center;
+  }
+  /* Reading style selection — 3 portrait cards */
+  .ob-style-options {
+    display:grid; grid-template-columns:1fr 1fr 1fr;
+    gap:8px; width:100%; margin-bottom:16px;
+  }
+  .ob-style-btn {
+    aspect-ratio:2/3; border-radius:6px; cursor:pointer;
+    border:1px solid rgba(240,236,228,0.12);
+    background:rgba(240,236,228,0.04);
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:space-between;
+    padding:9px 7px;
+    transition:all 0.3s; color:#f0ece4;
+  }
+  .ob-style-btn.selected {
+    border-color:#c94040;
+    background:rgba(201,64,64,0.1);
+  }
+  .ob-style-corner {
+    width:100%; display:flex; align-items:center; gap:2px;
+  }
+  .ob-style-corner.bottom {
+    justify-content:flex-end; transform:rotate(180deg);
+  }
+  .ob-style-center {
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+  }
+  .ob-style-label {
     font-family:'Montserrat',sans-serif; font-size:6px;
+    letter-spacing:0.2em; text-transform:uppercase;
+    color:rgba(240,236,228,0.7); text-align:center;
+  }
+  .ob-style-desc {
+    font-family:'Montserrat',sans-serif; font-size:5px;
     letter-spacing:0.1em; text-transform:uppercase;
-    color:rgba(240,236,228,0.35); margin-top:2px;
+    color:rgba(240,236,228,0.3); text-align:center; line-height:1.7;
   }
   .ob-textarea {
     width:100%; background:rgba(240,236,228,0.06);
@@ -4954,32 +5044,19 @@ const ONBOARD_CSS = `
     letter-spacing:0.18em; text-transform:uppercase;
     color:rgba(240,236,228,0.55);
   }
-  /* Step top bar — back arrow left, dots center, spacer right */
-  .ob-progress-bar {
-    display:flex; align-items:center; justify-content:space-between;
-    width:100%; margin-bottom:32px;
-  }
+  /* Back button in topbar */
   .ob-back {
     width:32px; height:32px; display:flex; align-items:center; justify-content:center;
     background:none; border:none; cursor:pointer;
-    color:rgba(240,236,228,0.5); transition:color 0.2s; flex-shrink:0;
+    color:rgba(240,236,228,0.45); transition:color 0.25s; flex-shrink:0;
   }
-  .ob-back:hover { color:rgba(240,236,228,0.9); }
+  .ob-back:hover { color:rgba(240,236,228,0.85); }
   .ob-progress {
-    display:flex; gap:20px; align-items:center;
+    display:flex; gap:18px; align-items:center;
   }
   .ob-suit-pip {
-    transition: color 0.35s ease, filter 0.35s ease;
+    transition: color 0.7s cubic-bezier(0.4,0,0.2,1);
     cursor: pointer; display:flex;
-  }
-  /* Big step numeral — Cormorant, ghost */
-  .ob-step-num {
-    font-family:'Cormorant Unicase',Georgia,serif;
-    font-size:88px; font-weight:300; line-height:0.85;
-    letter-spacing:-0.02em;
-    color:rgba(240,236,228,0.12);
-    text-align:center; margin-bottom:8px;
-    user-select:none; text-transform:lowercase;
   }
   .ob-skip {
     font-family:'Montserrat',sans-serif; font-size:7px;
@@ -5250,9 +5327,11 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
   const [emailSent, setEmailSent] = React.useState(false);
   const [name, setName] = React.useState("");
   const [deck, setDeck] = React.useState("playing");
+  const [readingStyle, setReadingStyle] = React.useState("dialogue");
   const [intention, setIntention] = React.useState("");
   const [exiting, setExiting] = React.useState(false);
 
+  // Steps: welcome is idx 0, numeric steps start at 1
   const STEPS = ["welcome","email","name","deck","intention"];
   const stepIdx = STEPS.indexOf(step);
 
@@ -5262,40 +5341,41 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
       setExiting(false);
       onUpdate({ ...updates });
       onComplete(nextStep);
-    }, 360);
+    }, 460);
   };
 
   const finishOnboard = async () => {
     setExiting(true);
-    const userData = { name, email, deck, intention,
-      joinedAt: new Date().toISOString() };
+    const userData = { name, email, deck, intention, joinedAt: new Date().toISOString() };
     try {
       await storage.set("oracle_user", JSON.stringify(userData));
-      // Build context profile from onboarding data
+      // Save reading style preference
+      const existingPrefs = await storage.get("oracle_prefs");
+      const prefs = existingPrefs ? JSON.parse(existingPrefs.value) : {};
+      await storage.set("oracle_prefs", JSON.stringify({ ...prefs, defaultDeck: deck, defaultStyle: readingStyle }));
+      // Build context profile
       const deckLabel = deck === "playing" ? "traditional 52-card playing cards" : "78-card tarot";
       const intentionPart = intention ? " Their current intention or focus: " + intention + "." : "";
       const ctx = "You are reading for " + (name || "a seeker") + ", who practices daily card pulls as a ritual of reflection and guidance. Their preferred deck: " + deckLabel + "." + intentionPart + " This is a disciplined, reflective practice — not a casual horoscope check. Speak with care, directness, and honesty.";
       await storage.set("oracle_context", ctx);
     } catch {}
+    onUpdate({ deck, readingStyle });
     setTimeout(() => {
       setExiting(false);
       onComplete("completing");
-    }, 360);
+    }, 460);
   };
 
-  const skip = () => advance("app");
+  // Suit pip colors — solid (no opacity), light up when step is completed (past)
+  const pipColor = (pipRealIdx, red) => {
+    const isDone = pipRealIdx < stepIdx;
+    if (isDone) return red ? "#c94040" : "#c8c4bc";
+    return "#1e1c1a"; // solid dark grey — same tonal family as ghost numerals
+  };
 
-  // Completion flash — suits cycle then go to "ready"
-  if (step === "completing") return (
-    <div className="ob-root" style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <style>{ONBOARD_CSS}</style>
-      <SuitsFlash onDone={() => onComplete("app")}/>
-    </div>
-  );
-
-  // Login flash — same animation but returns to "app"
-  if (step === "login-flash") return (
-    <div className="ob-root" style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+  // Completing / login-flash — suits flash then transition to app
+  if (step === "completing" || step === "login-flash") return (
+    <div className="ob-root">
       <style>{ONBOARD_CSS}</style>
       <SuitsFlash onDone={() => onComplete("app")}/>
     </div>
@@ -5314,9 +5394,7 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
         </div>
       </div>
       <div className="ob-wordmark">oracle</div>
-      <div className="ob-tagline-block">
-        <div className="ob-tagline">Daily Divination</div>
-      </div>
+      <div className="ob-tagline">Daily Divination</div>
       <div className="ob-suits">
         <span>♠ </span><span className="red">♦ </span><span>♣ </span><span className="red">♥</span>
       </div>
@@ -5327,80 +5405,78 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
     <div className="ob-root">
       <style>{ONBOARD_CSS}</style>
       <div className="ob-screen">
-        <div className="ob-ready-mark">
-          <OracleMark size={64}/>
-        </div>
-        <div className="ob-heading">
-          {name ? `welcome, ${name.toLowerCase()}.` : "welcome."}
-        </div>
-        <div className="ob-sub">
-          your practice begins now.
-        </div>
-        <button className="ob-btn" onClick={() => {
+        <div className="ob-ready-mark"><OracleMark size={64}/></div>
+        <div className="ob-heading">{name ? `welcome, ${name.toLowerCase()}.` : "welcome."}</div>
+        <div className="ob-sub">your practice begins now.</div>
+        <button className="ob-btn" style={{justifyContent:"space-between"}} onClick={() => {
           setExiting(true);
           setTimeout(() => onComplete("app"), 600);
         }}>
-          ♦ enter the oracle ♦
+          <span style={{display:"flex",gap:4}}>
+            <SuitIcon suit="spade" size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+            <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,200,200,0.8)"}}/>
+          </span>
+          <span>enter the oracle</span>
+          <span style={{display:"flex",gap:4}}>
+            <SuitIcon suit="club" size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+            <SuitIcon suit="heart" size={10} style={{color:"rgba(255,200,200,0.8)"}}/>
+          </span>
         </button>
       </div>
     </div>
   );
 
+  // Numeric steps (email → intention) — progress bar is persistent outside ob-screen
+  const PIPS = [
+    { s:"email",     suit:"spade",   red:false },
+    { s:"name",      suit:"diamond", red:true  },
+    { s:"deck",      suit:"club",    red:false },
+    { s:"intention", suit:"heart",   red:true  },
+  ];
+
   return (
     <div className="ob-root">
       <style>{ONBOARD_CSS}</style>
-      <div className={`ob-screen ${exiting?"ob-exit":""}`}>
 
-        {/* Step top bar — back, dots, spacer */}
-        {stepIdx >= 0 && (
-          <div className="ob-progress-bar">
-            <button className="ob-back" onClick={() => {
-              const prev = STEPS[stepIdx - 1];
-              if (prev) advance(prev);
-            }} style={{visibility: stepIdx === 0 ? "hidden" : "visible"}}>
-              <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="17" y1="7" x2="1" y2="7"/>
-                <polyline points="7,1 1,7 7,13"/>
-              </svg>
-            </button>
-            <div className="ob-progress">
-              {[
-                { s:"email",     suit:"spade",   red:false },
-                { s:"name",      suit:"diamond", red:true  },
-                { s:"deck",      suit:"club",    red:false },
-                { s:"intention", suit:"heart",   red:true  },
-              ].map(({ s, suit, red }, i) => {
-                const realIdx = i + 1;
-                const isDone   = realIdx < stepIdx;
-                const isActive = realIdx === stepIdx;
-                const lit = red ? "#c94040" : "rgba(240,236,228,0.9)";
-                const mid = red ? "rgba(201,64,64,0.5)" : "rgba(240,236,228,0.5)";
-                const dim = red ? "rgba(201,64,64,0.18)" : "rgba(240,236,228,0.18)";
-                const color = isActive ? lit : isDone ? mid : dim;
-                return (
-                  <div key={s} className="ob-suit-pip"
-                    onClick={() => { if (realIdx < stepIdx) advance(s); }}
-                    style={{ color }}>
-                    <SuitIcon suit={suit} size={13}/>
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{width:32}}/>
+      {/* ── Persistent top bar — never animates ── */}
+      {stepIdx > 0 && (
+        <div className="ob-topbar">
+          <button className="ob-back"
+            style={{visibility: stepIdx <= 1 ? "hidden" : "visible"}}
+            onClick={() => { const prev = STEPS[stepIdx-1]; if (prev) advance(prev); }}>
+            <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="17" y1="7" x2="1" y2="7"/>
+              <polyline points="7,1 1,7 7,13"/>
+            </svg>
+          </button>
+          <div className="ob-progress">
+            {PIPS.map(({ s, suit, red }, i) => (
+              <div key={s} className="ob-suit-pip"
+                onClick={() => { if (i+1 < stepIdx) advance(s); }}
+                style={{ color: pipColor(i+1, red), cursor: i+1 < stepIdx ? "pointer" : "default" }}>
+                <SuitIcon suit={suit} size={13}/>
+              </div>
+            ))}
           </div>
-        )}
+          <div style={{width:32}}/>
+        </div>
+      )}
+
+      {/* ── Ghost step numeral — huge, behind content ── */}
+      {stepIdx > 0 && (
+        <div key={stepIdx} className="ob-step-num">{stepIdx}</div>
+      )}
+
+      {/* ── Animated page content ── */}
+      <div className={`ob-screen ${exiting?"ob-exit":""}`}>
 
         {/* WELCOME */}
         {step === "welcome" && <WelcomeStep advance={advance}/>}
 
-
         {/* EMAIL */}
         {step === "email" && <>
-          <div className="ob-step-num">1</div>
           <div className="ob-heading">your email.</div>
-          <div className="ob-sub">
-            we send a magic link.<br/>no password. ever.
-          </div>
+          <div className="ob-sub">magic link. no password. ever.</div>
           {!emailSent ? <>
             <input
               className="ob-input"
@@ -5436,9 +5512,8 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
 
         {/* NAME */}
         {step === "name" && <>
-          <div className="ob-step-num">2</div>
-          <div className="ob-heading">what should<br/>the oracle call you?</div>
-          <div className="ob-sub">first name is fine.</div>
+          <div className="ob-heading">your name.</div>
+          <div className="ob-sub">what would you like the oracle to call you?</div>
           <input
             className="ob-input"
             type="text"
@@ -5456,55 +5531,106 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
           <button className="ob-skip" onClick={()=>advance("deck",{name:""})}>skip</button>
         </>}
 
-        {/* DECK */}
+        {/* MODALITY / DECK */}
         {step === "deck" && <>
-          <div className="ob-step-num">3</div>
-          <div className="ob-heading">your modality.</div>
-          <div className="ob-sub" style={{marginBottom:24}}>
-            choose your primary deck.<br/>you can change this anytime.
-          </div>
+          <div className="ob-heading">modality.</div>
+          <div className="ob-sub" style={{marginBottom:20}}>choose your primary deck.</div>
           <div className="ob-deck-options">
+            {/* Playing Cards — active */}
             <button
               className={`ob-deck-btn ${deck==="playing"?"selected":""}`}
               onClick={()=>setDeck("playing")}>
-              <div className="ob-deck-icon">♠ ♦</div>
-              <div className="ob-deck-label">Playing Cards</div>
-              <div className="ob-deck-desc">52 cards · traditional</div>
+              <div className="ob-deck-corner">
+                <SuitIcon suit="spade" size={9}/>
+                <SuitIcon suit="diamond" size={9} style={{color:"#c94040"}}/>
+              </div>
+              <div className="ob-deck-center">
+                <div className="ob-deck-suits-grid">
+                  <SuitIcon suit="spade" size={16}/>
+                  <SuitIcon suit="diamond" size={16} style={{color:"#c94040"}}/>
+                  <SuitIcon suit="club" size={16}/>
+                  <SuitIcon suit="heart" size={16} style={{color:"#c94040"}}/>
+                </div>
+                <div className="ob-deck-label">playing cards</div>
+                <div className="ob-deck-desc">52 cards · traditional</div>
+              </div>
+              <div className="ob-deck-corner bottom">
+                <SuitIcon suit="spade" size={9}/>
+                <SuitIcon suit="diamond" size={9} style={{color:"#c94040"}}/>
+              </div>
             </button>
-            <button
-              className={`ob-deck-btn ${deck==="tarot"?"selected":""}`}
-              onClick={()=>setDeck("tarot")}>
-              <div className="ob-deck-icon">♣ ♥</div>
-              <div className="ob-deck-label">Tarot</div>
-              <div className="ob-deck-desc">78 cards · arcana</div>
-            </button>
+            {/* Tarot — coming soon */}
+            <div className="ob-deck-btn dimmed">
+              <div className="ob-deck-corner" style={{color:"#2a2826"}}>
+                <span style={{fontSize:10,fontFamily:"serif"}}>?</span>
+                <span style={{fontSize:10,fontFamily:"serif"}}>?</span>
+              </div>
+              <div className="ob-deck-center">
+                <div className="ob-deck-suits-grid" style={{color:"#2a2826",fontFamily:"serif",fontSize:16}}>
+                  <span>?</span><span>?</span><span>?</span><span>?</span>
+                </div>
+                <div className="ob-deck-label">tarot</div>
+                <div className="ob-deck-desc">coming soon</div>
+              </div>
+              <div className="ob-deck-corner bottom" style={{color:"#2a2826"}}>
+                <span style={{fontSize:10,fontFamily:"serif"}}>?</span>
+              </div>
+            </div>
           </div>
           <button className="ob-btn" onClick={()=>advance("intention",{deck})}>
             continue →
           </button>
         </>}
 
-        {/* INTENTION */}
+        {/* INTENTION — format + intentions */}
         {step === "intention" && <>
-          <div className="ob-step-num">4</div>
-          <div className="ob-heading">
-            what are you<br/>seeking?
+          <div className="ob-heading">how should the<br/>oracle speak?</div>
+          <div className="ob-sub" style={{marginBottom:16}}>sets your default reading depth.</div>
+          {/* 3 format cards */}
+          <div className="ob-style-options">
+            {[
+              { v:"whisper",   label:"whisper",   desc:"3–5 lines\nsparse\nessential",    suit:"spade",   red:false },
+              { v:"dialogue",  label:"dialogue",  desc:"2–3 paragraphs\npersonal\ndirect", suit:"diamond", red:true  },
+              { v:"immersion", label:"immersion", desc:"4–5 paragraphs\nrich\nlayered",   suit:"heart",   red:true  },
+            ].map(({ v, label, desc, suit, red }) => (
+              <button key={v}
+                className={`ob-style-btn ${readingStyle===v?"selected":""}`}
+                onClick={()=>setReadingStyle(v)}>
+                <div className="ob-style-corner">
+                  <SuitIcon suit={suit} size={8} style={red?{color:"#c94040"}:{}}/>
+                </div>
+                <div className="ob-style-center">
+                  <div className="ob-style-label">{label}</div>
+                  <div className="ob-style-desc">
+                    {desc.split("\n").map((l,i)=><React.Fragment key={i}>{l}<br/></React.Fragment>)}
+                  </div>
+                </div>
+                <div className="ob-style-corner bottom">
+                  <SuitIcon suit={suit} size={8} style={red?{color:"#c94040"}:{}}/>
+                </div>
+              </button>
+            ))}
           </div>
-          <div className="ob-sub">
-            this seeds your oracle readings.<br/>be honest. be specific.
-          </div>
+          {/* Standing intention textarea */}
           <textarea
             className="ob-textarea"
-            placeholder={"clarity on a decision.\na relationship in flux.\nwhere to put my energy.\nor just — to listen."}
+            placeholder={"a standing intention or instruction for the oracle..."}
             value={intention}
             onChange={e=>setIntention(e.target.value)}
-            rows={4}
-            autoFocus
+            rows={3}
           />
-          <button className="ob-btn" onClick={()=>{ finishOnboard(); }}>
-            ♦ enter the oracle ♦
+          {/* Meet the Oracle CTA */}
+          <button className="ob-btn" style={{justifyContent:"space-between"}} onClick={finishOnboard}>
+            <span style={{display:"flex",gap:4}}>
+              <SuitIcon suit="spade" size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+              <SuitIcon suit="diamond" size={10} style={{color:"rgba(255,200,200,0.8)"}}/>
+            </span>
+            <span>meet the oracle</span>
+            <span style={{display:"flex",gap:4}}>
+              <SuitIcon suit="club" size={10} style={{color:"rgba(255,255,255,0.7)"}}/>
+              <SuitIcon suit="heart" size={10} style={{color:"rgba(255,200,200,0.8)"}}/>
+            </span>
           </button>
-          <button className="ob-skip" onClick={()=>{ setIntention(""); finishOnboard(); }}>skip</button>
         </>}
 
       </div>
@@ -6229,19 +6355,6 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
                 onClick={() => selectRank(r)}
               >{r}</button>
             ))}
-          </div>
-
-          {/* Reading depth */}
-          <div className="form-field">
-            <label className="form-label">Reading Depth</label>
-            <div className="style-chips">
-              {[["whisper","Whisper","3-5 lines"],["dialogue","Dialogue","2-3 paragraphs"],["immersion","Immersion","Full narrative"]].map(([v,n,d])=>(
-                <div key={v} className={`style-chip ${pullStyle===v?"selected":""}`} onClick={()=>setPullStyle(v)}>
-                  <div className="style-chip-name">{n}</div>
-                  <div className="style-chip-desc">{d}</div>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Receive reading CTA */}
@@ -7024,6 +7137,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
     if (updates.name) setOnboardName(updates.name);
     if (updates.deck) { setOnboardDeck(updates.deck); setDefaultDeck(updates.deck); setPullDeck(updates.deck); }
     if (updates.email) setOnboardUser(u => ({...u, email: updates.email}));
+    if (updates.readingStyle) { setDefaultStyle(updates.readingStyle); setPullStyle(updates.readingStyle); }
   };
 
   // Desktop detection
