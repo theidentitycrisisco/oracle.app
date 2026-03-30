@@ -221,7 +221,7 @@ const GLOBAL_CSS = `
   .header-title {
     font-family: var(--font-display);
     font-size: clamp(38px, 6vw, 56px);
-    font-weight: 300; letter-spacing: 0.01em; line-height: 0.95;
+    font-weight: 300; letter-spacing: 0.01em; line-height: 0.81;
     color: var(--ink); text-transform: lowercase;
   }
   .header-title em { font-style: normal; font-weight: 400; letter-spacing: 0em; }
@@ -441,12 +441,12 @@ const GLOBAL_CSS = `
   .timeline-entry:hover { background: var(--paper-dark); margin-left: -24px; margin-right: -24px; padding-left: 24px; padding-right: 24px; border-radius: 0; }
   .timeline-card-name {
     font-family: var(--font-display); font-size: 26px; font-weight: 400;
-    letter-spacing: 0.01em; text-transform: lowercase; line-height: 1;
+    letter-spacing: 0.01em; text-transform: lowercase; line-height: 0.85;
   }
   .timeline-meta {
     font-family: var(--font-display); font-size: 16px; font-weight: 300;
     letter-spacing: 0.01em; text-transform: lowercase;
-    color: var(--ash); line-height: 1;
+    color: var(--ash); line-height: 0.85;
   }
   .timeline-preview {
     font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 400;
@@ -720,7 +720,7 @@ const GLOBAL_CSS = `
   .modal-close { position: absolute; top: 16px; right: 20px; font-size: 10px; color: var(--silver); padding: 6px; transition: color 0.15s; }
   .modal-close:hover { color: var(--ink); }
   .modal-eyebrow { font-size: 10px; color: var(--ash); margin-bottom: 10px; }
-  .modal-card-title { font-family: var(--font-display); font-size: 42px; font-weight: 400; letter-spacing: 0.01em; text-transform: lowercase; line-height: 0.95; }
+  .modal-card-title { font-family: var(--font-display); font-size: 42px; font-weight: 400; letter-spacing: 0.01em; text-transform: lowercase; line-height: 0.81; }
   .modal-rule { border: none; border-top: 1px solid var(--rule); margin: 20px 0; }
   .modal-reading { font-family: var(--font-body); font-size: 16px; font-weight: 400; line-height: 1.85; color: var(--ink); }
   .modal-reading p { margin-bottom: 14px; }
@@ -786,7 +786,7 @@ const GLOBAL_CSS = `
   .pull-hero-count {
     font-family: var(--font-display); font-size: clamp(48px, 10vw, 72px);
     font-weight: 300; letter-spacing: 0.01em; text-transform: lowercase;
-    color: var(--ink); line-height: 1; text-align: center;
+    color: var(--ink); line-height: 0.85; text-align: center;
     cursor: pointer; transition: opacity 0.2s;
     border: none; background: none; padding: 0;
     display: block; width: 100%;
@@ -1357,7 +1357,7 @@ const GLOBAL_CSS = `
     font-family: var(--font-display);
     font-size: 22px; font-weight: 400;
     letter-spacing: 0.01em; text-transform: lowercase;
-    color: var(--ink); line-height: 1;
+    color: var(--ink); line-height: 0.85;
     margin-bottom: 2px;
   }
   .hero-dig-btn {
@@ -1373,7 +1373,7 @@ const GLOBAL_CSS = `
     font-family: var(--font-display);
     font-size: 16px; font-weight: 400;
     letter-spacing: 0.01em; text-transform: lowercase;
-    color: var(--ink); line-height: 1;
+    color: var(--ink); line-height: 0.85;
     margin-bottom: 2px;
   }
 
@@ -1383,7 +1383,7 @@ const GLOBAL_CSS = `
     font-weight: 400;
     letter-spacing: 0.01em;
     text-transform: lowercase;
-    line-height: 1;
+    line-height: 0.85;
     margin-bottom: 8px;
   }
   .hero-reading {
@@ -1937,7 +1937,7 @@ const GLOBAL_CSS = `
     animation: offerFade 0.9s cubic-bezier(0.16,1,0.3,1) both;
   }
   .offering-page-header .header-suits { margin-bottom: 2px; }
-  .offering-page-header .header-title { line-height: 0.95; }
+  .offering-page-header .header-title { line-height: 0.81; }
   .offering-page-subhead {
     font-family: 'Montserrat', sans-serif;
     font-size: 8px; letter-spacing: 0.28em; text-transform: uppercase;
@@ -1955,7 +1955,7 @@ const GLOBAL_CSS = `
   }
   .offering-date-bg {
     font-family: var(--font-display);
-    font-weight: 300; line-height: 0.92;
+    font-weight: 300; line-height: 0.78;
     letter-spacing: -0.04em;
     text-transform: lowercase;
     color: rgba(10,10,10,0.048);
@@ -3176,14 +3176,14 @@ function SolitaireGame({ dark }) {
         <div style={{
           fontFamily:"var(--font-display)", fontSize:"15px",
           fontWeight:400, letterSpacing:"0.06em", textTransform:"lowercase",
-          color:"var(--ash)", lineHeight:1.6, marginTop:"2px",
+          color:"var(--ash)", lineHeight:1.36, marginTop:"2px",
         }}>
           See Beyond The Oblivion Soon
         </div>
         <div style={{
           fontFamily:"var(--font-display)", fontSize:"15px",
           fontWeight:400, letterSpacing:"0.06em", textTransform:"lowercase",
-          color:"var(--ink)", lineHeight:1,
+          color:"var(--ink)", lineHeight:0.85,
           display:"inline-flex", alignItems:"center", gap:"8px",
         }}>
           For Now
@@ -4657,7 +4657,7 @@ const ONBOARD_CSS = `
   .ob-heading {
     font-size:30px; font-weight:300; letter-spacing:0.03em;
     text-align:center;
-    margin-bottom:10px; line-height:1.15;
+    margin-bottom:10px; line-height:0.98;
   }
   .ob-sub {
     font-family:'Montserrat',sans-serif; font-size:10px;
@@ -4786,7 +4786,7 @@ const ONBOARD_CSS = `
   /* Big step numeral — Cormorant, ghost */
   .ob-step-num {
     font-family:'Cormorant Unicase',Georgia,serif;
-    font-size:88px; font-weight:300; line-height:1;
+    font-size:88px; font-weight:300; line-height:0.85;
     letter-spacing:-0.02em;
     color:rgba(240,236,228,0.12);
     text-align:center; margin-bottom:8px;
