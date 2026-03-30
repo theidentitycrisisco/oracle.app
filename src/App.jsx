@@ -5011,6 +5011,151 @@ function OracleMark({ size=80, color="#f0ece4", opacity=1 }) {
   );
 }
 
+// ── OblivionProGate ──────────────────────────────────────────────────────────
+const PRO_FEATURES = [
+  { suit:"diamond", red:true,  label:"unlimited readings",        desc:"no monthly cap. pull every day, as many times as you need." },
+  { suit:"spade",   red:false, label:"multi-card spreads",        desc:"three-card past/present/future. celtic cross. custom layouts." },
+  { suit:"heart",   red:true,  label:"the deeper oracle",         desc:"extended conversations that carry memory across sessions." },
+  { suit:"club",    red:false, label:"pattern reading",           desc:"monthly themes, recurring symbols, your full arc analyzed." },
+  { suit:"diamond", red:true,  label:"ritual calendar",           desc:"moon phases, seasonal turning points, daily intentions." },
+  { suit:"spade",   red:false, label:"the oblivion",              desc:"a separate space. no guidance. no answers. only the cards." },
+];
+
+function OblivionProGate({ dark }) {
+  const [solitaireOpen, setSolitaireOpen] = React.useState(false);
+
+  if (solitaireOpen) return (
+    <div>
+      <button onClick={()=>setSolitaireOpen(false)} style={{
+        display:"flex", alignItems:"center", gap:"6px",
+        background:"none", border:"none", cursor:"pointer",
+        color:"var(--ash)", padding:"20px 0 8px",
+        fontFamily:"'Montserrat',sans-serif", fontSize:"8px",
+        letterSpacing:"0.22em", textTransform:"uppercase",
+      }}>
+        ← back to oblivion
+      </button>
+      <SolitaireGame dark={dark}/>
+    </div>
+  );
+
+  return (
+    <div style={{paddingBottom:"80px"}}>
+
+      {/* Hero */}
+      <div style={{
+        textAlign:"center", paddingTop:"8px", paddingBottom:"36px",
+        borderBottom:"1px solid var(--rule)", marginBottom:"32px",
+      }}>
+        <div style={{
+          fontFamily:"'Montserrat',sans-serif", fontSize:"8px",
+          letterSpacing:"0.3em", textTransform:"uppercase",
+          color:"var(--red-suit)", marginBottom:"16px",
+        }}>oracle pro</div>
+        <div style={{
+          fontFamily:"var(--font-display)", fontSize:"clamp(36px,7vw,52px)",
+          fontWeight:300, letterSpacing:"0.01em", textTransform:"lowercase",
+          lineHeight:0.85, color:"var(--ink)", marginBottom:"20px",
+        }}>
+          beyond the veil.
+        </div>
+        <div style={{
+          fontFamily:"'Montserrat',sans-serif", fontSize:"10px",
+          letterSpacing:"0.16em", textTransform:"uppercase",
+          color:"var(--ash)", lineHeight:1.8, maxWidth:"300px", margin:"0 auto 28px",
+        }}>
+          The cards have more to say.<br/>You just need to listen deeper.
+        </div>
+
+        {/* CTA */}
+        <button style={{
+          padding:"14px 32px",
+          background:"var(--red-suit)", border:"none", borderRadius:"3px",
+          fontFamily:"'Montserrat',sans-serif", fontSize:"9px",
+          letterSpacing:"0.24em", textTransform:"uppercase",
+          color:"#fff", cursor:"pointer",
+        }}
+          onClick={()=>{/* Stripe checkout */}}
+        >
+          ♦ unlock oracle pro ♦
+        </button>
+      </div>
+
+      {/* Locked features */}
+      <div style={{display:"flex", flexDirection:"column", gap:"0"}}>
+        {PRO_FEATURES.map(({ suit, red, label, desc }, i) => (
+          <div key={i} style={{
+            display:"flex", alignItems:"flex-start", gap:"16px",
+            padding:"20px 0", borderBottom:"1px solid var(--rule)",
+          }}>
+            {/* Lock + suit */}
+            <div style={{
+              flexShrink:0, width:"32px", height:"32px",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              color: red ? "var(--red-suit)" : "var(--ink)", opacity:0.35,
+            }}>
+              <SuitIcon suit={suit} size={16}/>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{
+                fontFamily:"var(--font-display)", fontSize:"18px",
+                fontWeight:400, textTransform:"lowercase", letterSpacing:"0.02em",
+                color:"var(--ink)", lineHeight:0.9, marginBottom:"6px",
+                display:"flex", alignItems:"center", gap:"8px",
+              }}>
+                {label}
+                <span style={{
+                  fontSize:"7px", letterSpacing:"0.14em", padding:"2px 5px",
+                  borderRadius:"2px", background:"rgba(201,64,64,0.12)",
+                  color:"var(--red-suit)", fontFamily:"'Montserrat',sans-serif",
+                  textTransform:"uppercase", alignSelf:"center",
+                }}>locked</span>
+              </div>
+              <div style={{
+                fontFamily:"'Montserrat',sans-serif", fontSize:"10px",
+                letterSpacing:"0.08em", color:"var(--ash)", lineHeight:1.7,
+              }}>
+                {desc}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Pricing hint */}
+      <div style={{
+        textAlign:"center", paddingTop:"36px", paddingBottom:"8px",
+      }}>
+        <div style={{
+          fontFamily:"'Montserrat',sans-serif", fontSize:"8px",
+          letterSpacing:"0.22em", textTransform:"uppercase",
+          color:"var(--ash)", marginBottom:"4px",
+        }}>
+          pricing coming soon
+        </div>
+        <div style={{
+          fontFamily:"var(--font-display)", fontSize:"13px",
+          color:"var(--silver)", letterSpacing:"0.04em", textTransform:"lowercase",
+        }}>
+          early access will be discounted.
+        </div>
+      </div>
+
+      {/* Solitaire link — free forever */}
+      <div style={{textAlign:"center", paddingTop:"28px"}}>
+        <button onClick={()=>setSolitaireOpen(true)} style={{
+          background:"none", border:"none", cursor:"pointer",
+          fontFamily:"'Montserrat',sans-serif", fontSize:"8px",
+          letterSpacing:"0.2em", textTransform:"uppercase",
+          color:"var(--silver)", padding:"8px",
+        }}>
+          ♠ play solitaire while you wait ♠
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── WelcomeStep ─────────────────────────────────────────────────────────────
 // Isolated so it can own the Google One Tap useEffect lifecycle
 function WelcomeStep({ advance }) {
@@ -6462,9 +6607,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
     );
   };
 
-  const renderVeil = () => (
-    <SolitaireGame dark={darkMode}/>
-  );
+  const renderVeil = () => <OblivionProGate dark={darkMode}/>;
 
   const renderOracle = () => (
     <OraclePage
@@ -7053,6 +7196,12 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
             <button className={`desktop-nav-item ${activeTab==="veil"?"active":""}`} onClick={()=>setActiveTab("veil")}>
               <SuitIcon suit="diamond" size={14} style={{color: activeTab==="veil" ? "var(--red-suit)" : "currentColor"}}/>
               Oblivion
+              <span style={{
+                marginLeft:"auto", fontSize:"7px", letterSpacing:"0.14em",
+                padding:"2px 5px", borderRadius:"2px",
+                background:"rgba(201,64,64,0.18)", color:"#c94040",
+                fontFamily:"'Montserrat',sans-serif", textTransform:"uppercase",
+              }}>pro</span>
             </button>
             <button className={`desktop-nav-item ${activeTab==="archive"?"active":""}`} onClick={()=>setActiveTab("archive")}>
               <SuitIcon suit="club" size={14}/>
