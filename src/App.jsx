@@ -229,6 +229,16 @@ const GLOBAL_CSS = `
   .header-date { font-size: 9px; color: var(--ash); letter-spacing: 0.20em; line-height: 1.8; }
   .header-suits { display: flex; gap: 12px; align-items: center; justify-content: center; }
 
+  /* Persistent suit icons bar — lives above all page content, never fades */
+  .app-suits-bar {
+    display: flex; gap: 16px; align-items: center; justify-content: center;
+    padding: 44px 0 0;
+  }
+  .app-suits-bar-icon {
+    transition: color 0.22s ease, filter 0.22s ease;
+    display: flex;
+  }
+
   /* ── PULL CTA ── */
   .pull-cta {
     display: flex; align-items: center; justify-content: space-between;
@@ -1925,9 +1935,9 @@ const GLOBAL_CSS = `
     overflow: visible;
   }
 
-  /* Universal page header */
+  /* Universal page header — suits now live in AppSuitsBar above */
   .offering-page-header {
-    padding: 48px 0 28px;
+    padding: 16px 0 28px;
     border-bottom: 1px solid var(--rule);
     margin-bottom: 0;
     margin-left: -24px; margin-right: -24px;
@@ -2254,7 +2264,7 @@ const GLOBAL_CSS = `
 
   /* ── PageHeader — universal top nav ──────────────────────────────────── */
   .page-header {
-    padding: 52px 0 22px;
+    padding: 16px 0 22px;
     border-bottom: 1px solid var(--rule);
     margin-bottom: 20px;
     display: flex; flex-direction: column;
@@ -2609,6 +2619,100 @@ function LoadingScreen({ card }) {
         <div className="loading-dot" />
         <div className="loading-dot" />
       </div>
+    </div>
+  );
+}
+
+// ── SuitsFlash ─────────────────────────────────────────────────────────────
+// Full-screen cycling suit animation used for onboarding completion + login
+const FLASH_SUITS = [
+  { suit:"spade",   red:false },
+  { suit:"diamond", red:true  },
+  { suit:"club",    red:false },
+  { suit:"heart",   red:true  },
+];
+function SuitsFlash({ onDone }) {
+  const [activeSuit, setActiveSuit] = React.useState(0);
+  const cycles = React.useRef(0);
+  const timerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setActiveSuit(prev => {
+        const next = (prev + 1) % 4;
+        if (next === 0) {
+          cycles.current += 1;
+          if (cycles.current >= 3) {
+            clearInterval(timerRef.current);
+            setTimeout(onDone, 300);
+          }
+        }
+        return next;
+      });
+    }, 280);
+    return () => clearInterval(timerRef.current);
+  }, []); // eslint-disable-line
+
+  return (
+    <div style={{
+      display:"flex", gap:"32px", alignItems:"center", justifyContent:"center",
+      padding:"8px 0",
+    }}>
+      {FLASH_SUITS.map(({ suit, red }, i) => {
+        const isActive = i === activeSuit;
+        const litColor  = red ? "#c94040" : "rgba(240,236,228,0.95)";
+        const dimColor  = red ? "rgba(201,64,64,0.12)" : "rgba(240,236,228,0.1)";
+        return (
+          <div key={suit} style={{
+            color: isActive ? litColor : dimColor,
+            transition: "color 0.18s ease, filter 0.18s ease",
+            filter: isActive
+              ? `drop-shadow(0 0 10px ${red ? "rgba(201,64,64,0.55)" : "rgba(240,236,228,0.3)"})`
+              : "none",
+          }}>
+            <SuitIcon suit={suit} size={30}/>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── AppSuitsBar ─────────────────────────────────────────────────────────────
+// Persistent suit icons that live above page content — never unmounts
+function AppSuitsBar({ cycling }) {
+  const [activeSuit, setActiveSuit] = React.useState(0);
+  const intervalRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (cycling) {
+      intervalRef.current = setInterval(() => {
+        setActiveSuit(i => (i + 1) % 4);
+      }, 240);
+    } else {
+      clearInterval(intervalRef.current);
+      setActiveSuit(0);
+    }
+    return () => clearInterval(intervalRef.current);
+  }, [cycling]);
+
+  return (
+    <div className="app-suits-bar">
+      {FLASH_SUITS.map(({ suit, red }, i) => {
+        const isActive = cycling && i === activeSuit;
+        const idleColor  = red ? "var(--red-suit)" : "var(--ink)";
+        const dimColor   = red ? "rgba(201,64,64,0.18)" : "rgba(128,120,112,0.2)";
+        return (
+          <div key={suit} className="app-suits-bar-icon" style={{
+            color: cycling ? (isActive ? idleColor : dimColor) : idleColor,
+            filter: isActive
+              ? `drop-shadow(0 0 6px ${red ? "rgba(201,64,64,0.45)" : "rgba(255,255,255,0.15)"})`
+              : "none",
+          }}>
+            <SuitIcon suit={suit} size={14}/>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -4041,12 +4145,7 @@ function PageHeader({ title, sub, onMenu, onSettings }) {
     <div className="page-header">
       <div className="page-header-topbar">
         <button className="page-header-menu-btn" onClick={onMenu||(()=>{})}>{BURGER}</button>
-        <div className="page-header-suits">
-          <SuitIcon suit="spade"   size={14} style={{color:"var(--ink)"}}/>
-          <SuitIcon suit="diamond" size={14} style={{color:"var(--red-suit)"}}/>
-          <SuitIcon suit="club"    size={14} style={{color:"var(--ink)"}}/>
-          <SuitIcon suit="heart"   size={14} style={{color:"var(--red-suit)"}}/>
-        </div>
+        <div style={{width:32}}/>
         <button className="page-header-menu-btn" onClick={onSettings||(()=>{})}>{DOTS}</button>
       </div>
       <div className="page-header-title">{title}</div>
@@ -4773,16 +4872,12 @@ const ONBOARD_CSS = `
   }
   .ob-back:hover { color:rgba(240,236,228,0.9); }
   .ob-progress {
-    display:flex; gap:8px; align-items:center;
+    display:flex; gap:20px; align-items:center;
   }
-  .ob-dot {
-    width:5px; height:5px; border-radius:50%;
-    background:rgba(240,236,228,0.18);
-    transition:all 0.25s; cursor:pointer;
+  .ob-suit-pip {
+    transition: color 0.35s ease, filter 0.35s ease;
+    cursor: pointer; display:flex;
   }
-  .ob-dot:hover { background:rgba(240,236,228,0.45); transform:scale(1.3); }
-  .ob-dot.active { background:#c94040; transform:scale(1.2); }
-  .ob-dot.done { background:rgba(240,236,228,0.45); }
   /* Big step numeral — Cormorant, ghost */
   .ob-step-num {
     font-family:'Cormorant Unicase',Georgia,serif;
@@ -4856,11 +4951,27 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
     } catch {}
     setTimeout(() => {
       setExiting(false);
-      onComplete("ready");
+      onComplete("completing");
     }, 360);
   };
 
   const skip = () => advance("app");
+
+  // Completion flash — suits cycle then go to "ready"
+  if (step === "completing") return (
+    <div className="ob-root" style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <style>{ONBOARD_CSS}</style>
+      <SuitsFlash onDone={() => onComplete("ready")}/>
+    </div>
+  );
+
+  // Login flash — same animation but returns to "app"
+  if (step === "login-flash") return (
+    <div className="ob-root" style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <style>{ONBOARD_CSS}</style>
+      <SuitsFlash onDone={() => onComplete("app")}/>
+    </div>
+  );
 
   if (step === "splash") return (
     <div className="ob-root">
@@ -4925,13 +5036,25 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
               </svg>
             </button>
             <div className="ob-progress">
-              {STEPS.slice(1).map((s,i) => {
+              {[
+                { s:"email",     suit:"spade",   red:false },
+                { s:"name",      suit:"diamond", red:true  },
+                { s:"deck",      suit:"club",    red:false },
+                { s:"intention", suit:"heart",   red:true  },
+              ].map(({ s, suit, red }, i) => {
                 const realIdx = i + 1;
+                const isDone   = realIdx < stepIdx;
+                const isActive = realIdx === stepIdx;
+                const lit = red ? "#c94040" : "rgba(240,236,228,0.9)";
+                const mid = red ? "rgba(201,64,64,0.5)" : "rgba(240,236,228,0.5)";
+                const dim = red ? "rgba(201,64,64,0.18)" : "rgba(240,236,228,0.18)";
+                const color = isActive ? lit : isDone ? mid : dim;
                 return (
-                  <div key={s}
-                    className={`ob-dot ${realIdx===stepIdx?"active":realIdx<stepIdx?"done":""}`}
+                  <div key={s} className="ob-suit-pip"
                     onClick={() => { if (realIdx < stepIdx) advance(s); }}
-                  />
+                    style={{ color }}>
+                    <SuitIcon suit={suit} size={13}/>
+                  </div>
                 );
               })}
             </div>
@@ -5205,6 +5328,14 @@ export default function OracleApp() {
   const [oracleDateKey, setOracleDateKey] = useState(null);
   const [oracleThreads, setOracleThreads] = useState({});
   const [pullSaved, setPullSaved] = useState(false);
+  const [suitsState, setSuitsState] = useState("idle"); // "idle" | "cycling"
+
+  // Cycle suit icons on every tab change
+  useEffect(() => {
+    setSuitsState("cycling");
+    const t = setTimeout(() => setSuitsState("idle"), 500);
+    return () => clearTimeout(t);
+  }, [activeTab]);
 
   useEffect(() => {
     (async () => {
@@ -5223,9 +5354,9 @@ export default function OracleApp() {
           setOnboardUser(u);
           setOnboardName(u.name||"");
           setOnboardDeck(u.deck||"playing");
-          // Existing user — go straight to splash then app
-          setTimeout(() => setOnboardStep("app"), 1800);
+          // Existing user — splash → login-flash → app
           setOnboardStep("splash");
+          setTimeout(() => setOnboardStep("login-flash"), 1800);
         } else {
           // New user — show splash then welcome
           setTimeout(() => setOnboardStep("welcome"), 2200);
@@ -6808,9 +6939,14 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
         <div className={isDesktop ? "desktop-center" : ""}>
         <div className="app">
 
-          {/* Header, hidden on pull + home + oracle + reading + archive tabs */}
+          {/* Persistent suit icons — shared element above all pages, never unmounts */}
+          {activeTab !== "pull" && activeTab !== "oracle" && activeTab !== "reading" && activeTab !== "veil" && (
+            <AppSuitsBar cycling={suitsState === "cycling"}/>
+          )}
+
+          {/* Header title for non-home pages (suits now in AppSuitsBar above) */}
           {activeTab !== "pull" && activeTab !== "home" && activeTab !== "oracle" && activeTab !== "reading" && activeTab !== "archive" && activeTab !== "veil" && (
-            <div className="header" style={{flexDirection:"column", alignItems:"center", textAlign:"center", gap:"10px", position:"relative"}}>
+            <div className="header" style={{flexDirection:"column", alignItems:"center", textAlign:"center", gap:"10px", position:"relative", paddingTop:"16px"}}>
               <button className="dots-menu-btn" onClick={()=>setActiveTab("profile")}
                 style={{position:"absolute", top:0, right:0}}>
                 <svg width="14" height="14" viewBox="0 0 4 16" fill="currentColor">
@@ -6819,25 +6955,13 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
                   <circle cx="2" cy="14" r="1.2"/>
                 </svg>
               </button>
-              <div className="header-suits" style={{letterSpacing:"0.22em"}}>
-                <SuitIcon suit="spade" size={16}/>
-                <SuitIcon suit="diamond" size={16} style={{color:"var(--red-suit)"}}/>
-                <SuitIcon suit="club" size={16}/>
-                <SuitIcon suit="heart" size={16} style={{color:"var(--red-suit)"}}/>
-              </div>
               <div className="header-title">the offering</div>
             </div>
           )}
 
-          {/* Home header — universal page header style */}
+          {/* Home header — suits now in AppSuitsBar above */}
           {activeTab === "home" && (
-            <div className="offering-page-header">
-              <div className="header-suits">
-                <SuitIcon suit="spade"   size={14} style={{color:"var(--ink)"}}/>
-                <SuitIcon suit="diamond" size={14} style={{color:"var(--red-suit)"}}/>
-                <SuitIcon suit="club"    size={14} style={{color:"var(--ink)"}}/>
-                <SuitIcon suit="heart"   size={14} style={{color:"var(--red-suit)"}}/>
-              </div>
+            <div className="offering-page-header" style={{paddingTop:"8px"}}>
               <div className="header-title">the offering</div>
               <div className="offering-page-subhead">
                 {todayPull ? "your draw of the day" : "your daily draw awaits"}
