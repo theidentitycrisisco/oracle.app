@@ -7038,7 +7038,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
     @media (min-width: 1024px) {
       .bottom-nav { display: none !important; }
       .desktop-sidebar {
-        position: fixed; top: 0; left: 0; bottom: 0; width: 25vw;
+        position: fixed; top: 0; left: 0; bottom: 0; width: max(25vw, calc((100vw - 720px) / 2));
         border-right: 1px solid var(--rule);
         background: var(--paper);
         display: flex; flex-direction: column;
@@ -7099,8 +7099,8 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
       }
       .desktop-nav-settings:hover { color: var(--ink); }
       .desktop-center {
-        margin-left: 25vw;
-        margin-right: 25vw;
+        margin-left: max(25vw, calc((100vw - 720px) / 2));
+        margin-right: max(25vw, calc((100vw - 720px) / 2));
         min-height: 100vh;
         background: var(--paper);
         transition: background 0.3s;
@@ -7114,7 +7114,7 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
       .desktop-center .offering-screen { align-items: stretch; }
       .desktop-center .offering-card-wrap { display: flex; justify-content: center; }
       .desktop-oracle-panel {
-        position: fixed; top: 0; right: 0; bottom: 0; width: 25vw;
+        position: fixed; top: 0; right: 0; bottom: 0; width: max(25vw, calc((100vw - 720px) / 2));
         border-left: 1px solid var(--rule);
         background: var(--paper);
         display: flex; flex-direction: column;
@@ -7148,11 +7148,11 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
         font-style: italic; font-size: 15px; color: var(--ash); line-height: 1.7;
       }
       /* ── Full-width pages: snap fixed overlays to center column ── */
-      .oracle-page { left: 25vw; right: 25vw; max-width: none; margin: 0; }
-      .oracle-input-row { left: 25vw; right: 25vw; max-width: none; margin: 0; bottom: 0; }
-      .reading-input-row { left: 25vw; right: 25vw; }
-      .reading-save-btn { left: 25vw; right: 25vw; }
-      .offering-sticky-cta { left: 25vw; right: 25vw; max-width: none; margin: 0; bottom: 0; }
+      .oracle-page { left: max(25vw, calc((100vw - 720px) / 2)); right: max(25vw, calc((100vw - 720px) / 2)); max-width: none; margin: 0; }
+      .oracle-input-row { left: max(25vw, calc((100vw - 720px) / 2)); right: max(25vw, calc((100vw - 720px) / 2)); max-width: none; margin: 0; bottom: 0; }
+      .reading-input-row { left: max(25vw, calc((100vw - 720px) / 2)); right: max(25vw, calc((100vw - 720px) / 2)); }
+      .reading-save-btn { left: max(25vw, calc((100vw - 720px) / 2)); right: max(25vw, calc((100vw - 720px) / 2)); }
+      .offering-sticky-cta { left: max(25vw, calc((100vw - 720px) / 2)); right: max(25vw, calc((100vw - 720px) / 2)); max-width: none; margin: 0; bottom: 0; }
       .pull-form { max-width: 100%; }
     }
     @media (max-width: 1023px) {
