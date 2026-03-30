@@ -5289,7 +5289,7 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
   if (step === "completing") return (
     <div className="ob-root" style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
       <style>{ONBOARD_CSS}</style>
-      <SuitsFlash onDone={() => onComplete("ready")}/>
+      <SuitsFlash onDone={() => onComplete("app")}/>
     </div>
   );
 
