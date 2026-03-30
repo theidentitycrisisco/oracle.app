@@ -1,4 +1,12 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from "react";
+import {
+  supabase,
+  loadFromCloud,
+  saveToCloud,
+  signInWithEmail,
+  signInWithGoogle,
+  supabaseSignOut,
+} from "./supabase.js";
 
 // localStorage shim — matches the window.storage API shape used throughout
 // (window.storage only exists inside Claude artifacts; this makes the app work in real browsers)
@@ -5094,7 +5102,7 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
           </div>
 
           {/* Secondary — Google */}
-          <button className="ob-btn-google" onClick={()=>advance("name")}>
+          <button className="ob-btn-google" onClick={()=>signInWithGoogle()}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -5124,12 +5132,12 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
               placeholder="you@wherever.com"
               value={email}
               onChange={e=>setEmail(e.target.value)}
-              onKeyDown={e=>{if(e.key==="Enter"&&email.includes("@")){setEmailSent(true);}}}
+              onKeyDown={e=>{if(e.key==="Enter"&&email.includes("@")){signInWithEmail(email).then(()=>setEmailSent(true));}}}
               autoFocus
             />
             <button className="ob-btn"
               disabled={!email.includes("@")}
-              onClick={()=>setEmailSent(true)}>
+              onClick={()=>signInWithEmail(email).then(()=>setEmailSent(true))}>
               send magic link →
             </button>
           </> : (
@@ -5142,7 +5150,7 @@ function Onboarding({ step, onComplete, onUpdate, user }) {
               <button className="ob-btn" onClick={()=>advance("name",{email})}>
                 i'm in →
               </button>
-              <button className="ob-skip" onClick={()=>setEmailSent(false)}>
+              <button className="ob-skip" onClick={()=>{setEmailSent(false);signInWithEmail(email);}}>
                 resend
               </button>
             </div>
@@ -5329,6 +5337,7 @@ export default function OracleApp() {
   const [oracleThreads, setOracleThreads] = useState({});
   const [pullSaved, setPullSaved] = useState(false);
   const [suitsState, setSuitsState] = useState("idle"); // "idle" | "cycling"
+  const [supabaseUser, setSupabaseUser] = useState(null); // authenticated Supabase user
 
   // Cycle suit icons on every tab change
   useEffect(() => {
@@ -5337,11 +5346,48 @@ export default function OracleApp() {
     return () => clearTimeout(t);
   }, [activeTab]);
 
+  // ── Supabase auth listener ──────────────────────────────────────────────────
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const user = session?.user || null;
+      setSupabaseUser(user);
+      if (event === "SIGNED_IN" && user) {
+        // Load cloud data into localStorage first
+        await loadFromCloud(user.id);
+        // Check if this user has a completed profile
+        const hasProfile = !!localStorage.getItem("oracle_user");
+        if (hasProfile) {
+          // Returning user — go straight to app via flash
+          setOnboardStep("login-flash");
+        }
+        // If no profile: stay in current onboarding step (they continue from email)
+      } else if (event === "SIGNED_OUT") {
+        setSupabaseUser(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []); // eslint-disable-line
+
+  // ── Cloud sync — debounced, runs 2s after any significant state change ──────
+  const cloudSyncTimer = useRef(null);
+  useEffect(() => {
+    if (!supabaseUser) return;
+    clearTimeout(cloudSyncTimer.current);
+    cloudSyncTimer.current = setTimeout(() => saveToCloud(supabaseUser.id), 2000);
+  }, [pulls, onboardUser, contextProfile, resonanceMap, supabaseUser]);
+
   useEffect(() => {
     (async () => {
       const base = {};
       HISTORICAL_PULLS.forEach(p => { base[p.date] = p; });
       try {
+        // If there's a live Supabase session, load cloud data first so localStorage is up to date
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setSupabaseUser(session.user);
+          await loadFromCloud(session.user.id);
+        }
+
         // Check for existing user — skip onboarding if found
         const userStored = await storage.get("oracle_user");
         const stored = await storage.get("oracle_pulls");
@@ -6527,6 +6573,8 @@ Continue the conversation. Be direct, grounded, poetic when the card demands it.
       <div className="settings-section" style={{borderTop:"1px solid var(--rule)",paddingTop:"28px",marginTop:"12px"}}>
         <button className="settings-logout-btn" onClick={async()=>{
           try { await storage.delete("oracle_user"); } catch {}
+          await supabaseSignOut().catch(()=>{});
+          setSupabaseUser(null);
           setOnboardStep("splash");
           setTimeout(()=>setOnboardStep("welcome"), 2200);
           setActiveTab("home");
